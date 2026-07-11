@@ -983,7 +983,7 @@ function calendarDayCounts(month){
   }
   return {weekdays,saturdays};
 }
-function capacityHoursForMonth(month,roomCount=state.rooms.length){
+function capacityHoursForMonth(month,roomCount=activeRooms().length){
   const {weekdays,saturdays}=calendarDayCounts(month);
   const s=state.settings;
   const weekdayCapacity=weekdays*s.weekdayTeams*s.hoursPerTeam;
@@ -1007,11 +1007,12 @@ function monthlyMetrics(month=state.selectedMonth,roomId=null){
   const delayed=all.filter(a=>hasDelay(a,monthReference(month)));
   const avg=all.length?Math.round(all.reduce((sum,a)=>sum+Number(a.progress||0),0)/all.length):0;
   const respect=complete.length?Math.round(complete.filter(isOnTime).length/complete.length*100):0;
-  const roomCount=roomId===null?state.rooms.length:1;
+  const roomCount=roomId===null?activeRooms().length:1;
   const capacity=capacityHoursForMonth(month,roomCount);
   const occupied=all.reduce((sum,a)=>sum+clippedHours(a,month),0);
   const occupancy=capacity?Math.round(occupied/capacity*100):0;
-  return {planned:all.length,complete:complete.length,delayed:delayed.length,avg,respect,occupancy,occupiedHours:occupied,capacityHours:capacity};
+  const totalDelay=all.reduce((sum,activity)=>sum+delayMinutes(activity),0);
+  return {planned:all.length,complete:complete.length,delayed:delayed.length,avg,respect,occupancy,occupiedHours:occupied,capacityHours:capacity,delayMinutes:totalDelay};
 }
 
 function getReferenceTime(){
@@ -1169,12 +1170,13 @@ function shiftMonth(delta){
 function renderKPIs(){
   const metrics=monthlyMetrics();
   document.getElementById('kpiContext').textContent=`Indicateurs de ${fmtMonth(state.selectedMonth)}`;
-  document.getElementById('capacityContext').textContent=`Capacité : ${capacityDescription()} · ${Math.round(metrics.capacityHours)} h disponibles sur 4 locaux.`;
+  document.getElementById('capacityContext').textContent=`Capacité : ${capacityDescription()} · ${Math.round(metrics.capacityHours)} h disponibles sur ${activeRooms().length} local(aux) actif(s).`;
   const realizedRate=metrics.planned?Math.round(metrics.complete/metrics.planned*100):0;
   const cards=[
     ['Taux d’occupation',`${metrics.occupancy}%`,`${Math.round(metrics.occupiedHours)} h planifiées`,metrics.occupancy>=75?'ok':metrics.occupancy>=45?'warn':''],
     ['Respect planning',`${metrics.respect}%`,`${metrics.complete} activité(s) clôturée(s)`,metrics.complete===0?'':metrics.respect>=90?'ok':metrics.respect>=75?'warn':'bad'],
     ['Retards / blocages',metrics.delayed,`sur ${metrics.planned} activité(s)`,metrics.delayed===0?'ok':metrics.delayed<=2?'warn':'bad'],
+    ['Retard cumulé',formatDuration(metrics.delayMinutes),'fin réelle − fin planifiée',metrics.delayMinutes===0?'ok':metrics.delayMinutes<=120?'warn':'bad'],
     ['Avancement moyen',`${metrics.avg}%`,'activités du mois',metrics.avg>=75?'ok':metrics.avg>=45?'warn':''],
     ['Réalisées / planifiées',`${metrics.complete} / ${metrics.planned}`,`${realizedRate}% réalisées`,realizedRate>=80?'ok':realizedRate>=50?'warn':'']
   ];
@@ -1343,9 +1345,9 @@ function renderPareto(){
   document.getElementById('pareto').innerHTML=rows.length?rows.map(([category,count])=>`<div class="pareto-row"><strong>${DELAY_LABELS[category]}</strong><div class="pareto-track"><div class="pareto-fill" style="width:${count/max*100}%"></div></div><b>${count}</b></div>`).join(''):'<div class="empty-state">Aucun retard ou blocage catégorisé sur ce mois.</div>';
 }
 function renderLocalSummary(){
-  document.getElementById('localSummaryBody').innerHTML=state.rooms.map(room=>{
+  document.getElementById('localSummaryBody').innerHTML=roomsForMonthlySummary().map(room=>{
     const metrics=monthlyMetrics(state.selectedMonth,room.id);
-    return `<tr><td><strong>${escapeHTML(room.name)}</strong></td><td>${metrics.planned}</td><td>${metrics.complete}</td><td>${metrics.avg}%</td><td>${metrics.occupancy}%</td><td>${metrics.delayed}</td></tr>`;
+    return `<tr><td><strong>${escapeHTML(room.name)}</strong>${room.isActive===false?' <span class="badge idle">Inactif</span>':''}</td><td>${metrics.planned}</td><td>${metrics.complete}</td><td>${metrics.avg}%</td><td>${metrics.occupancy}%</td><td>${metrics.delayed}</td><td>${formatDuration(metrics.delayMinutes)}</td></tr>`;
   }).join('');
 }
 
@@ -1391,11 +1393,15 @@ function renderAll(){
     renderMonthlyCalendar();renderMonthlyPerformance();renderPareto();renderLocalSummary();
   }
   renderHistory();renderChangeLog();applyProfile();renderSavedStatus();
+  if(currentView==='monthly') renderMonthlyDelay();
+  renderConnectionStatus();
 }
 
 function fillRoomSelect(){
-  const rooms=activeRooms().length?activeRooms():state.rooms;
-  document.getElementById('fRoom').innerHTML=rooms.map(room=>`<option value="${room.id}">${escapeHTML(room.name)}</option>`).join('');
+  const select=document.getElementById('fRoom');
+  const currentActivity=getActivity(document.getElementById('fId')?.value||'');
+  const rooms=state.rooms.filter(room=>room.isActive!==false||Number(room.id)===Number(currentActivity?.roomId));
+  select.innerHTML=rooms.map(room=>`<option value="${room.id}">${escapeHTML(room.name)}${room.isActive===false?' — inactif':''}</option>`).join('');
 }
 function fillProductSelect(preferred=''){
   const room=getRoom(Number(document.getElementById('fRoom').value));
@@ -1832,51 +1838,11 @@ safePersist=function(nextState=state,options={}){
   return ok;
 };
 
-const baseMonthlyMetrics=monthlyMetrics;
-monthlyMetrics=function(month=state.selectedMonth,roomId=null){
-  const metrics=baseMonthlyMetrics(month,roomId);
-  metrics.delayMinutes=monthActivities(month)
-    .filter(activity=>activity.status!=='cancelled'&&(roomId===null||Number(activity.roomId)===Number(roomId)))
-    .reduce((sum,activity)=>sum+delayMinutes(activity),0);
-  return metrics;
-};
-
-capacityHoursForMonth=function(month,roomCount=activeRooms().length){
-  const {weekdays,saturdays}=calendarDayCounts(month);
-  const settings=state.settings;
-  const weekdayCapacity=weekdays*settings.weekdayTeams*settings.hoursPerTeam;
-  const saturdayCapacity=settings.includeSaturday?saturdays*settings.saturdayTeams*settings.hoursPerTeam:0;
-  return (weekdayCapacity+saturdayCapacity)*roomCount;
-};
-
-renderKPIs=function(){
-  const metrics=monthlyMetrics();
-  document.getElementById('kpiContext').textContent=`Indicateurs de ${fmtMonth(state.selectedMonth)}`;
-  document.getElementById('capacityContext').textContent=`Capacité : ${capacityDescription()} · ${Math.round(metrics.capacityHours)} h disponibles sur ${activeRooms().length} local(aux) actif(s).`;
-  const realizedRate=metrics.planned?Math.round(metrics.complete/metrics.planned*100):0;
-  const cards=[
-    ['Taux d’occupation',`${metrics.occupancy}%`,`${Math.round(metrics.occupiedHours)} h planifiées`,metrics.occupancy>=75?'ok':metrics.occupancy>=45?'warn':''],
-    ['Respect planning',`${metrics.respect}%`,`${metrics.complete} activité(s) clôturée(s)`,metrics.complete===0?'':metrics.respect>=90?'ok':metrics.respect>=75?'warn':'bad'],
-    ['Retards / blocages',metrics.delayed,`sur ${metrics.planned} activité(s)`,metrics.delayed===0?'ok':metrics.delayed<=2?'warn':'bad'],
-    ['Retard cumulé',formatDuration(metrics.delayMinutes),'fin réelle − fin planifiée',metrics.delayMinutes===0?'ok':metrics.delayMinutes<=120?'warn':'bad'],
-    ['Avancement moyen',`${metrics.avg}%`,'activités du mois',metrics.avg>=75?'ok':metrics.avg>=45?'warn':''],
-    ['Réalisées / planifiées',`${metrics.complete} / ${metrics.planned}`,`${realizedRate}% réalisées`,realizedRate>=80?'ok':realizedRate>=50?'warn':'']
-  ];
-  document.getElementById('kpis').innerHTML=cards.map(card=>`<div class="kpi ${card[3]}"><div class="label">${card[0]}</div><div class="value">${card[1]}</div><div class="sub">${card[2]}</div></div>`).join('');
-};
-
 const baseRenderRooms=renderRooms;
 renderRooms=function(){
   const allRooms=state.rooms;
   state.rooms=activeRooms();
   try{baseRenderRooms();}finally{state.rooms=allRooms;}
-};
-
-fillRoomSelect=function(){
-  const select=document.getElementById('fRoom');
-  const currentActivity=getActivity(document.getElementById('fId')?.value||'');
-  const rooms=state.rooms.filter(room=>room.isActive!==false||Number(room.id)===Number(currentActivity?.roomId));
-  select.innerHTML=rooms.map(room=>`<option value="${room.id}">${escapeHTML(room.name)}${room.isActive===false?' — inactif':''}</option>`).join('');
 };
 
 const baseClearForm=clearForm;
@@ -1915,20 +1881,6 @@ function renderMonthlyDelay(){
   const values=weeklyDelay(state.selectedMonth),max=Math.max(1,...values.map(item=>item.minutes));
   chart.innerHTML=values.map(item=>`<div class="bar-wrap"><div class="bar ${item.minutes===0?'no-data':''}" style="height:${item.minutes===0?5:Math.max(8,item.minutes/max*100)}%"><span>${item.minutes?formatDuration(item.minutes):'0 min'}</span></div><div class="bar-label">${item.label}</div></div>`).join('');
 }
-
-renderLocalSummary=function(){
-  document.getElementById('localSummaryBody').innerHTML=roomsForMonthlySummary().map(room=>{
-    const metrics=monthlyMetrics(state.selectedMonth,room.id);
-    return `<tr><td><strong>${escapeHTML(room.name)}</strong>${room.isActive===false?' <span class="badge idle">Inactif</span>':''}</td><td>${metrics.planned}</td><td>${metrics.complete}</td><td>${metrics.avg}%</td><td>${metrics.occupancy}%</td><td>${metrics.delayed}</td><td>${formatDuration(metrics.delayMinutes)}</td></tr>`;
-  }).join('');
-};
-
-const baseRenderAll=renderAll;
-renderAll=function(){
-  baseRenderAll();
-  if(currentView==='monthly') renderMonthlyDelay();
-  renderConnectionStatus();
-};
 
 function mergeChangeLogs(localLogs,serverLogs){
   const map=new Map();
@@ -2214,6 +2166,7 @@ function toggleArticle(code){
   if(!isPlanner()) return;
   const a=getArticle(code);if(!a) return;
   a.active=a.active===false;
+  logChange(a.active?'Article activé':'Article désactivé',a.code);
   safePersist();renderArticlesTable();
 }
 
@@ -2233,7 +2186,7 @@ function downloadCsvTemplate(){
 }
 function prepareCsvRow(row,index=0){
   const localCode=String(row.local_code||'').trim().toUpperCase();
-  const room=localCode?state.rooms.find(r=>String(r.code).toUpperCase()===localCode||String(r.name).toUpperCase().includes(localCode)):null;
+  const room=localCode?state.rooms.find(r=>String(r.code).trim().toUpperCase()===localCode||String(r.name).trim().toUpperCase()===localCode):null;
   const status=(row.status||'planned').toLowerCase();
   const type=String(row.type||'Lot en cours').trim();
   const art=getArticle(row.article_code);

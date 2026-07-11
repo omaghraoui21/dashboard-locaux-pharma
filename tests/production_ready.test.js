@@ -172,6 +172,8 @@ check('shipped HTML cloud config is production-shaped', () => {
   assert.ok(seedBlock.includes('activities:[]'), 'production seed must start without activities');
   assert.ok(!seedBlock.includes('AF12-260701'), 'demo activity must not exist in the production seed');
   assert.ok(html.includes('snapshot.articles') && html.includes('snapshot.movements'), 'remote articles and stock snapshot required');
+  assert.ok(/function toggleArticle[\s\S]*?logChange\(/.test(html), 'article toggles must mark the seed as changed');
+  assert.ok(!/name\)\.toUpperCase\(\)\.includes\(localCode\)/.test(html), 'CSV room matching must not accept partial names');
 });
 
 check('inline scripts parse and dynamic IDs are encoded', () => {
@@ -235,6 +237,12 @@ check('offline capture queues articles and stock movements', () => {
   const entities = testWindow.PharmaSync.getOutbox().map(item => item.entity);
   assert.ok(entities.includes('article'));
   assert.ok(entities.includes('stock_movement'));
+});
+
+check('outbox mutations are scoped to their authenticated author', () => {
+  const src = read('supabase-client.js');
+  assert.ok(src.includes('userId: runtime.session?.user?.id || null'));
+  assert.ok(/item\.userId && item\.userId !== runtime\.session\?\.user\?\.id/.test(src));
 });
 
 check('schema is reproducible for locaux_dash and Realtime', () => {

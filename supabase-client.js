@@ -308,13 +308,14 @@
   }
 
   function sameOutboxItem(left, right) {
-    return left?.queuedAt === right?.queuedAt
+    return left?.userId === right?.userId
+      && left?.queuedAt === right?.queuedAt
       && left?.operation === right?.operation
       && signature(left?.record) === signature(right?.record);
   }
 
   function outboxAttemptKey(item) {
-    return `${item.key}:${item.queuedAt}:${item.operation}:${signature(item.record)}`;
+    return `${item.userId || 'unclaimed'}:${item.key}:${item.queuedAt}:${item.operation}:${signature(item.record)}`;
   }
 
   function queueMutation(entity, operation, record, id) {
@@ -326,6 +327,7 @@
       operation,
       id: String(id),
       record: record ? clone(record) : null,
+      userId: runtime.session?.user?.id || null,
       queuedAt: new Date().toISOString(),
       attempts: 0,
       blocked: false,
@@ -446,6 +448,7 @@
   }
 
   function canPushItem(item) {
+    if (item.userId && item.userId !== runtime.session?.user?.id) return false;
     return runtime.profile?.role === 'planner' || (runtime.profile?.role === 'manager' && item.entity === 'stock_movement');
   }
 
