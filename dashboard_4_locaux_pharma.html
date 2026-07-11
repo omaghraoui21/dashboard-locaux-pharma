@@ -2361,9 +2361,11 @@ init();
 </script>
 <script>
 window.PHARMA_SUPABASE_CONFIG = window.PHARMA_SUPABASE_CONFIG || {
-  enabled: false,
-  url: 'https://YOUR_PROJECT.supabase.co',
-  publishableKey: 'YOUR_PUBLISHABLE_OR_ANON_KEY',
+  enabled: true,
+  url: 'https://vbgdtvbnnqxzdsoztmwv.supabase.co',
+  publishableKey: 'sb_publishable_aAIKfh4e5akC0Bnk2J4s8g_w9JSVi0u',
+  // Schéma isolé (ne touche pas les tables DPI existantes du projet)
+  schema: 'locaux_dash',
   redirectTo: window.location.protocol.startsWith('http') ? window.location.href.split('#')[0] : '',
   libraryUrl: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
 };

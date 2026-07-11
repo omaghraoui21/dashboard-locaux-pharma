@@ -614,13 +614,17 @@
       }
     }
 
-    runtime.client = window.supabase.createClient(runtime.config.url, runtime.config.key, {
+    const clientOptions = {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true
       }
-    });
+    };
+    if (runtime.config.schema && runtime.config.schema !== 'public') {
+      clientOptions.db = { schema: runtime.config.schema };
+    }
+    runtime.client = window.supabase.createClient(runtime.config.url, runtime.config.key, clientOptions);
 
     const { data: { subscription } } = runtime.client.auth.onAuthStateChange((_event, session) => {
       setTimeout(() => handleSession(session), 0);
