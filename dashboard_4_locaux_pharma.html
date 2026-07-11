@@ -1,0 +1,2374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard des locaux d'activité — Pilotage production</title>
+<style>
+  :root{
+    --bg:#f3f6f8;
+    --panel:#ffffff;
+    --ink:#18323f;
+    --muted:#6f8089;
+    --line:#dfe7eb;
+    --ok:#1f9d73;
+    --warn:#d9911b;
+    --bad:#d95555;
+    --info:#3b82c4;
+    --accent:#234e63;
+    --shadow:0 8px 24px rgba(24,50,63,.08);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}
+  .app{min-height:100vh;padding:18px}
+  .topbar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:16px}
+  .brand h1{font-size:24px;margin:0 0 4px}.brand p{margin:0;color:var(--muted);font-size:13px}
+  .top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .clock{padding:10px 14px;border-radius:12px;background:var(--panel);box-shadow:var(--shadow);font-weight:700;white-space:nowrap}
+  button,select,input,textarea{font:inherit}
+  button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;transition:transform .15s,opacity .15s}
+  button:hover{transform:translateY(-1px)} button:disabled{cursor:not-allowed;opacity:.45;transform:none}
+  .btn-primary{background:var(--accent);color:#fff}.btn-soft{background:#e8eff2;color:var(--accent)}
+  .btn-danger{background:#fdeaea;color:#9d2f2f}.btn-ok{background:#e4f6ef;color:#137054}.btn-warn{background:#fff2d8;color:#9f660a}
+  .role-box{display:flex;gap:8px;align-items:center;padding:7px 10px;background:var(--panel);border-radius:12px;box-shadow:var(--shadow)}
+  .role-box label{font-size:11px;color:var(--muted);font-weight:700}.role-box select{padding:7px 9px;border:1px solid var(--line);border-radius:8px}
+  .tabs{display:flex;gap:8px;background:var(--panel);padding:6px;border-radius:14px;box-shadow:var(--shadow);margin-bottom:16px;width:max-content;max-width:100%}
+  .tab{background:transparent;color:var(--muted)}.tab.active{background:var(--accent);color:#fff}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;background:var(--panel);padding:12px;border-radius:14px;box-shadow:var(--shadow);margin-bottom:16px}
+  .filters label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:5px;min-width:150px}
+  select,input,textarea{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;color:var(--ink)}
+  input:invalid,select:invalid{border-color:var(--bad)}
+  .kpi-context{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 2px 8px;color:var(--muted);font-size:12px}
+  .kpis{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--panel);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border-left:5px solid var(--info)}
+  .kpi.ok{border-left-color:var(--ok)}.kpi.warn{border-left-color:var(--warn)}.kpi.bad{border-left-color:var(--bad)}
+  .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .kpi .value{font-size:28px;font-weight:800;margin-top:6px}.kpi .sub{font-size:12px;color:var(--muted);margin-top:4px}
+  .room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}
+  .room{background:var(--panel);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .room::before{content:"";position:absolute;top:0;left:0;right:0;height:5px;background:var(--info)}
+  .room.status-ok::before{background:var(--ok)}.room.status-warn::before{background:var(--warn)}.room.status-bad::before{background:var(--bad)}.room.status-idle::before{background:#9aaab2}.room.status-info::before{background:var(--info)}
+  .room-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+  .room-title h3{margin:0;font-size:18px}.room-title p{margin:4px 0 0;color:var(--muted);font-size:12px}
+  .badge{padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+  .badge.ok{background:#e4f6ef;color:#137054}.badge.warn{background:#fff2d8;color:#9f660a}.badge.bad{background:#fde7e7;color:#a93838}.badge.idle{background:#edf1f3;color:#687982}.badge.info{background:#e7f1f8;color:#2d6f9e}
+  .activity-name{font-size:17px;font-weight:800;margin-bottom:8px}.activity-empty{font-size:15px;color:var(--muted);font-weight:700;margin-bottom:10px}
+  .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .meta div{background:#f7f9fa;border:1px solid #edf1f3;padding:9px;border-radius:10px;min-width:0}
+  .meta span{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}.meta strong{font-size:13px;word-break:break-word}
+  .progress-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px}
+  .progress{height:12px;background:#e7edef;border-radius:999px;overflow:hidden}.progress>div{height:100%;border-radius:999px;background:linear-gradient(90deg,#2e6a84,#4aa0be);transition:width .3s}
+  .progress.ok>div{background:linear-gradient(90deg,#1f8f68,#41b88c)}.progress.warn>div{background:linear-gradient(90deg,#c47b10,#edb23b)}.progress.bad>div{background:linear-gradient(90deg,#c43f3f,#e96e6e)}
+  .room-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap}
+  .delay{font-weight:800;font-size:13px}.delay.ok{color:var(--ok)}.delay.warn{color:var(--warn)}.delay.bad{color:var(--bad)}.delay.info{color:var(--info)}
+  .mini-actions{display:flex;gap:7px;flex-wrap:wrap}.mini-actions button{padding:7px 10px;font-size:12px}
+  .note{margin-top:10px;font-size:12px;color:var(--muted);background:#f8fafb;padding:9px;border-radius:9px}
+  .next-activity{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted)}
+  .next-activity strong{color:var(--ink)}
+  .lower{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.monthly-lower{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin-top:14px}
+  .panel{background:var(--panel);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}.panel h2{font-size:16px;margin:0 0 12px}.panel-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}.panel-head h2{margin:0}
+  .chart{height:210px;display:flex;align-items:flex-end;gap:8px;padding:18px 6px 24px;border-bottom:1px solid var(--line);position:relative;overflow-x:auto}
+  .bar-wrap{height:100%;min-width:42px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}.bar{width:70%;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#4aa0be,#2e6a84);position:relative;min-height:4px}.bar.no-data{background:#dfe7eb}
+  .bar span{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;white-space:nowrap}.bar-label{font-size:11px;color:var(--muted);white-space:nowrap}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:10px;flex-wrap:wrap}.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px}
+  table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:700;background:#fafcfc;position:sticky;top:0;z-index:1}.table-wrap{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:12px}.status-cell{font-weight:800}
+  .timeline{display:grid;gap:10px}.timeline-item{display:grid;grid-template-columns:78px 1fr;gap:10px;align-items:start}.timeline-time{font-size:12px;color:var(--muted);font-weight:700}.timeline-content{border-left:3px solid var(--info);padding-left:10px}.timeline-content.ok{border-left-color:var(--ok)}.timeline-content.warn{border-left-color:var(--warn)}.timeline-content.bad{border-left-color:var(--bad)}.timeline-content strong{font-size:13px}.timeline-content p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+  .calendar{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));border:1px solid var(--line);border-radius:12px;overflow:auto;background:#fff}.calendar-head{background:#f7f9fa;color:var(--muted);font-size:11px;font-weight:800;text-align:center;padding:9px;border-right:1px solid var(--line)}.calendar-day{min-height:126px;padding:8px;border-top:1px solid var(--line);border-right:1px solid var(--line);background:#fff}.calendar-day.outside{background:#fafcfc;color:#a6b1b7}.calendar-day.today{box-shadow:inset 0 0 0 2px var(--info)}.day-number{font-size:12px;font-weight:800;margin-bottom:6px}.activity-chip{display:block;border-left:4px solid var(--info);background:#eef5f9;border-radius:7px;padding:5px 6px;margin-bottom:5px;font-size:10px;color:var(--ink);cursor:default;overflow:hidden}.activity-chip.ok{border-left-color:var(--ok);background:#edf8f4}.activity-chip.warn{border-left-color:var(--warn);background:#fff7e6}.activity-chip.bad{border-left-color:var(--bad);background:#fff0f0}.activity-chip.info{border-left-color:var(--info)}.activity-chip.clickable{cursor:pointer}.activity-chip b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.activity-chip span{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.more-chip{font-size:10px;color:var(--muted);font-weight:700}
+  .pareto{display:grid;gap:11px}.pareto-row{display:grid;grid-template-columns:150px 1fr 35px;gap:10px;align-items:center;font-size:12px}.pareto-track{height:12px;background:#edf1f3;border-radius:999px;overflow:hidden}.pareto-fill{height:100%;background:linear-gradient(90deg,#d9911b,#efb64f);border-radius:999px}.empty-state{text-align:center;color:var(--muted);padding:28px 10px;font-size:13px}
+  dialog{border:0;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.25);padding:0;max-width:760px;width:calc(100% - 28px)}dialog::backdrop{background:rgba(16,30,38,.45)}
+  .modal{padding:18px}.modal h2{margin:0 0 14px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid .full{grid-column:1/-1}.form-grid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}.modal-actions{display:flex;justify-content:space-between;gap:9px;margin-top:16px;flex-wrap:wrap}.modal-actions-right{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap}.form-error{display:none;margin-top:12px;padding:10px;border-radius:9px;background:#fdeaea;color:#9d2f2f;font-size:12px;font-weight:700}.form-error.show{display:block}
+  .toast{position:fixed;right:18px;bottom:18px;max-width:380px;padding:12px 14px;border-radius:12px;background:var(--accent);color:#fff;box-shadow:0 12px 30px rgba(0,0,0,.22);font-size:13px;font-weight:700;opacity:0;pointer-events:none;transform:translateY(12px);transition:.2s;z-index:100}.toast.show{opacity:1;transform:translateY(0)}.toast.bad{background:#9d2f2f}.toast.ok{background:#137054}
+  .footer-note{margin-top:14px;color:var(--muted);font-size:11px;text-align:right}.view-section[hidden]{display:none!important}.planner-only[hidden]{display:none!important}.filter-month[hidden],.filter-date[hidden]{display:none!important}
+  #printReport{display:none}
+
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid rgba(59,130,196,.35);outline-offset:2px}
+  .saved-status{padding:8px 10px;border-radius:10px;background:#eef5f3;color:#1d6f58;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid #d9ece6}
+  .connection-status{padding:8px 10px;border-radius:10px;background:#edf3f7;color:#315d72;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid #d9e5eb}
+  .connection-status.online{background:#e7f6ef;color:#176f54;border-color:#cce9dc}.connection-status.offline{background:#fff3db;color:#95600a;border-color:#f1dfba}.connection-status.error{background:#fdeaea;color:#9d2f2f;border-color:#f2caca}
+  .sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:6px}.auth-summary{padding:10px;border:1px solid var(--line);border-radius:10px;background:#f7f9fa;margin-bottom:12px}.auth-summary strong{display:block;margin-bottom:3px}.room-admin-list{display:grid;gap:9px;max-height:360px;overflow:auto}.room-admin-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;background:#f8fafb}.room-admin-row.inactive{opacity:.62}.room-admin-row input{min-width:0}.sync-warning{margin-top:8px;padding:9px;border-radius:9px;background:#fff3db;color:#95600a;font-size:11px;font-weight:700}.delay-chart .bar{background:linear-gradient(180deg,#e8a842,#c87812)}
+  .room-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:flex-start}
+  .badge.hygiene-propre{background:#edf8f4;color:#176f54}.badge.hygiene-a_nettoyer{background:#fff3db;color:#95600a}
+  .badge.occ-disponible{background:#eef5f9;color:#315d72}.badge.occ-en_production{background:#e7f0ff;color:#244f8a}
+  .hint-inline{font-size:10px;color:var(--muted);font-weight:600;margin-top:2px}
+  .toolbar-separator{width:1px;height:30px;background:var(--line)}
+  .journal-panel{padding:0;overflow:hidden}.journal-panel summary{cursor:pointer;padding:16px;font-weight:800;list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center}.journal-panel summary::-webkit-details-marker{display:none}.journal-panel summary::after{content:"＋";font-size:18px;color:var(--muted)}.journal-panel[open] summary::after{content:"−"}.journal-content{padding:0 16px 16px}
+  .settings-section{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}.settings-section h3{font-size:14px;margin:0 0 10px}.checkbox-row{display:flex!important;flex-direction:row!important;align-items:center;gap:8px!important}.checkbox-row input{width:auto}.storage-track{height:10px;background:#edf1f3;border-radius:999px;overflow:hidden;margin:8px 0}.storage-fill{height:100%;background:linear-gradient(90deg,#2e6a84,#4aa0be);border-radius:999px}.hint{font-size:11px;color:var(--muted);line-height:1.45}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.detail-grid>div{background:#f7f9fa;border:1px solid #edf1f3;padding:10px;border-radius:10px}.detail-grid .full{grid-column:1/-1}.detail-grid span{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}.detail-grid strong{font-size:13px;word-break:break-word}.detail-list{display:grid;gap:8px;max-height:430px;overflow:auto}.detail-list-item{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;background:#f7f9fa;color:var(--ink);border:1px solid var(--line);padding:10px}.detail-list-item span{font-size:12px;color:var(--muted);margin-top:3px}.modal.compact{max-width:520px}.activity-chip{width:100%;border:0;text-align:left;font-weight:600}.more-chip{border:0;background:transparent;padding:4px 2px;cursor:pointer;text-align:left}.more-chip:hover{text-decoration:underline;transform:none}.timezone-line{margin-top:8px;color:var(--muted);font-size:11px}.danger-zone{border-color:#f2caca;background:#fffafa}.top-actions .btn-soft,.top-actions .btn-primary{white-space:nowrap}
+  @media(max-width:1150px){.kpis{grid-template-columns:repeat(3,1fr)}.lower,.monthly-lower{grid-template-columns:1fr}.room-grid{grid-template-columns:1fr}.calendar{grid-template-columns:repeat(7,minmax(105px,1fr))}}
+  @media(max-width:760px){.app{padding:10px}.topbar{align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start;width:100%}.kpis{grid-template-columns:repeat(2,1fr)}.meta{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:1}.filters label{min-width:100%}.clock{width:100%}.tabs{width:100%}.tab{flex:1}.calendar{display:block;border:0}.calendar-head{display:none}.calendar-day{min-height:auto;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}.calendar-day.outside{display:none}.pareto-row{grid-template-columns:110px 1fr 30px}.detail-grid{grid-template-columns:1fr}.detail-grid .full{grid-column:1}.saved-status{width:100%;text-align:center}.toolbar-separator{display:none}.connection-status{width:100%;text-align:center}.room-admin-row{grid-template-columns:1fr}}
+  @media(max-width:480px){.kpis{grid-template-columns:1fr}.top-actions>*{width:100%}.role-box{justify-content:space-between}.mini-actions{width:100%}.mini-actions button{flex:1}}
+  @media print{
+    body{background:#fff}.app,.toast,dialog{display:none!important}#printReport{display:block!important;color:#111;font-family:Arial,sans-serif;padding:10mm}#printReport h1{font-size:22px;margin:0 0 4px}#printReport h2{font-size:15px;margin:18px 0 8px}#printReport p{font-size:11px;margin:2px 0}.print-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0}.print-kpi{border:1px solid #bbb;padding:8px;border-radius:6px}.print-kpi b{display:block;font-size:18px}.print-kpi span{font-size:9px;color:#555}.print-table{width:100%;font-size:9px;border-collapse:collapse}.print-table th,.print-table td{border:1px solid #bbb;padding:5px}.print-table th{background:#eee}.print-table thead{display:table-header-group}.print-table tr{break-inside:avoid;page-break-inside:avoid}.print-note{font-size:9px;color:#555;margin-top:10px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <h1>Dashboard des locaux d’activité</h1>
+      <p>Pilotage opérationnel — planning, occupation, avancement et retards</p>
+    </div>
+    <div class="top-actions">
+      <div class="role-box">
+        <label for="profileSelect">Profil</label>
+        <select id="profileSelect" onchange="requestProfileChange(this.value)" aria-label="Choisir le profil d’accès">
+          <option value="manager">Manager</option>
+          <option value="planner">Planificateur</option>
+        </select>
+      </div>
+      <button class="btn-soft" id="lockPlannerBtn" onclick="lockPlanner()" hidden aria-label="Verrouiller le profil Planificateur">Verrouiller</button>
+      <div class="clock" id="clock" aria-label="Date et heure locales">--:--:--</div>
+      <div class="saved-status" id="savedStatus" aria-live="polite">Données à jour · —</div>
+      <div class="connection-status offline" id="connectionStatus" aria-live="polite"><span class="sync-dot"></span>Mode local</div>
+      <button class="btn-soft" id="authOpenBtn" onclick="openAuthDialog()" aria-label="Ouvrir la connexion Supabase">Connexion</button>
+      <button class="btn-soft" id="syncNowBtn" onclick="requestSyncNow()" aria-label="Synchroniser maintenant">Synchroniser</button>
+      <button class="btn-soft" id="logoutBtn" onclick="logoutSupabase()" hidden aria-label="Se déconnecter de Supabase">Déconnexion</button>
+      <div class="toolbar-separator" aria-hidden="true"></div>
+      <button class="btn-soft" onclick="exportJSON()" aria-label="Exporter une sauvegarde complète au format JSON">Sauvegarde JSON</button>
+      <button class="btn-soft planner-only" onclick="triggerImportJSON()" aria-label="Restaurer une sauvegarde JSON">Restaurer JSON</button>
+      <input type="file" id="jsonImportInput" accept="application/json,.json" hidden onchange="importJSONFile(this)" />
+      <button class="btn-soft planner-only" onclick="openSettings()" aria-label="Ouvrir les paramètres de capacité et de stockage">Paramètres</button>
+      <button class="btn-soft planner-only" onclick="openRoomsManager()" aria-label="Gérer les locaux">Locaux</button>
+      <button class="btn-soft planner-only" onclick="openArticlesManager()" aria-label="Programmer les articles FSF PF">Articles</button>
+      <button class="btn-soft planner-only" onclick="openCsvImport()" aria-label="Importer un planning CSV Excel">Import CSV</button>
+      <button class="btn-soft" id="stockBtn" onclick="openStockDialog()" aria-label="Mouvements stock A26">Stock A26</button>
+      <button class="btn-soft" onclick="exportMonthlyCSV()">Rapport mensuel CSV</button>
+      <button class="btn-soft" onclick="exportMonthlyPDF()">Rapport mensuel PDF</button>
+      <button class="btn-primary planner-only" id="newActivityBtn" onclick="openCreateActivity()">Nouvelle activité</button>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Vues du dashboard" onkeydown="handleTabKeydown(event)">
+    <button class="tab active" id="realtimeTab" role="tab" aria-selected="true" aria-controls="realtimeView" tabindex="0" onclick="setView('realtime')">Vue temps réel</button>
+    <button class="tab" id="monthlyTab" role="tab" aria-selected="false" aria-controls="monthlyView" tabindex="-1" onclick="setView('monthly')">Vue mensuelle</button>
+  </div>
+
+  <div class="filters">
+    <label>Statut
+      <select id="statusFilter" onchange="renderAll()">
+        <option value="all">Tous</option>
+        <option value="active">En cours / en pause</option>
+        <option value="planned">Planifiées</option>
+        <option value="late">Retards / blocages</option>
+        <option value="complete">Terminées</option>
+        <option value="idle">Locaux disponibles</option>
+      </select>
+    </label>
+    <label>Équipe
+      <select id="teamFilter" onchange="renderAll()">
+        <option value="all">Toutes les équipes</option>
+        <option>Équipe A</option><option>Équipe B</option><option>Équipe C</option>
+      </select>
+    </label>
+    <label class="filter-date">Date de référence
+      <input type="date" id="dateFilter" onchange="renderAll()" />
+    </label>
+    <label class="filter-month" hidden>Mois analysé
+      <input type="month" id="monthFilter" onchange="changeMonth(this.value)" />
+    </label>
+    <label>Recherche lot / produit / activité
+      <input id="searchFilter" placeholder="Ex. 260701 / mélange" oninput="renderAll()" />
+    </label>
+  </div>
+
+  <div class="kpi-context">
+    <span id="kpiContext">Indicateurs mensuels</span>
+    <span id="capacityContext">Capacité paramétrable.</span>
+  </div>
+  <div class="kpis" id="kpis"></div>
+
+  <section id="realtimeView" class="view-section" role="tabpanel" aria-labelledby="realtimeTab">
+    <div class="room-grid" id="rooms"></div>
+    <div class="lower">
+      <div class="panel">
+        <h2>Respect du planning — 7 derniers jours</h2>
+        <div class="chart" id="planningChart"></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#2e6a84"></i>% des activités clôturées à l'heure</span>
+          <span><i class="dot" style="background:#dfe7eb"></i>Aucune activité clôturée</span>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Événements récents</h2>
+        <div class="timeline" id="timeline"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="monthlyView" class="view-section" role="tabpanel" aria-labelledby="monthlyTab" hidden>
+    <div class="panel">
+      <div class="panel-head">
+        <h2 id="calendarTitle">Calendrier mensuel</h2>
+        <div class="mini-actions">
+          <button class="btn-soft" onclick="shiftMonth(-1)">← Mois précédent</button>
+          <button class="btn-soft" onclick="shiftMonth(1)">Mois suivant →</button>
+        </div>
+      </div>
+      <div class="calendar" id="monthlyCalendar"></div>
+    </div>
+
+    <div class="monthly-lower">
+      <div class="panel">
+        <h2>Performance planning par semaine</h2>
+        <div class="chart" id="monthlyPerformanceChart"></div>
+        <div class="legend"><span><i class="dot" style="background:#2e6a84"></i>% clôturé à l'heure</span></div>
+      </div>
+      <div class="panel">
+        <h2>Pareto mensuel des retards / blocages</h2>
+        <div class="pareto" id="pareto"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h2>Retard cumulé par semaine</h2>
+      <div class="chart delay-chart" id="monthlyDelayChart"></div>
+      <div class="legend"><span><i class="dot" style="background:#c87812"></i>Somme des fins réelles postérieures aux fins planifiées</span></div>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <h2>Synthèse par local</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Local</th><th>Activités planifiées</th><th>Réalisées</th><th>Avancement moyen</th><th>Occupation</th><th>Retards / blocages</th><th>Retard cumulé</th></tr></thead>
+          <tbody id="localSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div class="panel" style="margin-top:14px">
+    <div class="panel-head">
+      <h2>Historique et planning du mois</h2>
+      <span id="historyCount" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Local</th><th>Activité</th><th>Produit / lot</th><th>Planning</th><th>Fin réelle</th><th>Écart</th><th>Cause</th><th>Statut</th><th class="planner-only">Action</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+    <div class="footer-note">Cache local actif avec synchronisation Supabase lorsqu’elle est configurée — outil de pilotage opérationnel.</div>
+    <div class="timezone-line" id="timezoneFooter"></div>
+  </div>
+
+  <details class="panel journal-panel" style="margin-top:14px">
+    <summary><span>Mini-journal local des modifications</span><span id="journalCount" style="font-size:11px;color:var(--muted);font-weight:600"></span></summary>
+    <div class="journal-content">
+      <div class="table-wrap" style="max-height:300px">
+        <table>
+          <thead><tr><th>Date</th><th>Action</th><th>Détail</th></tr></thead>
+          <tbody id="journalBody"></tbody>
+        </table>
+      </div>
+      <div class="footer-note">Journal opérationnel local limité aux dernières modifications ; il ne remplace pas un système documentaire.</div>
+    </div>
+  </details>
+</div>
+
+<dialog id="activityDialog" aria-labelledby="dialogTitle">
+  <form method="dialog" class="modal" onsubmit="saveActivity(event)" novalidate>
+    <h2 id="dialogTitle">Nouvelle activité</h2>
+    <input type="hidden" id="fId" />
+    <div class="form-grid">
+      <label>Local<select id="fRoom" required onchange="onActivityRoomChange()"></select></label>
+      <label>Statut
+        <select id="fStatus" onchange="handleStatusChange()" required>
+          <option value="planned">Planifiée</option>
+          <option value="running">En cours</option>
+          <option value="paused">En pause</option>
+          <option value="complete">Terminée</option>
+          <option value="cancelled">Annulée</option>
+        </select>
+      </label>
+      <label>Type d’activité
+        <select id="fActivityType" required onchange="onActivityTypeChange()">
+          <option value="Lot en cours">Lot en cours</option>
+          <option value="Nettoyage">Nettoyage</option>
+          <option value="Intervention maintenance">Intervention maintenance</option>
+        </select>
+      </label>
+      <label id="fProductLabel">Produit / flux
+        <select id="fProductSelect" onchange="onProductSelectChange()"></select>
+        <input id="fProduct" type="hidden" />
+      </label>
+      <label class="full" id="fActivityCustomWrap" hidden>Libellé activité (libre)<input id="fActivity" placeholder="Précision optionnelle" maxlength="120" /></label>
+      <label>Lot<input id="fBatch" placeholder="N° lot" maxlength="50" /></label>
+      <label>Équipe<select id="fTeam"><option>Équipe A</option><option>Équipe B</option><option>Équipe C</option></select></label>
+      <label>Responsable<input id="fOwner" placeholder="Nom / fonction" maxlength="100" /></label>
+      <label>Début planifié<input id="fPlanStart" type="datetime-local" required /></label>
+      <label>Fin planifiée<input id="fPlanEnd" type="datetime-local" required /></label>
+      <label>Début réel<input id="fActualStart" type="datetime-local" /></label>
+      <label>Fin réelle<input id="fActualEnd" type="datetime-local" /></label>
+      <label>Avancement (%)<input id="fProgress" type="number" min="0" max="100" step="1" value="0" required /></label>
+      <label>Étape en cours<input id="fStep" placeholder="Ex. tamisage, IPC, nettoyage..." maxlength="100" /></label>
+      <label>Retard / blocage
+        <select id="fDelayCategory">
+          <option value="none">Aucun</option>
+          <option value="panne">Panne</option>
+          <option value="attente_reglage">Attente réglage</option>
+          <option value="changement_format">Changement de format</option>
+          <option value="nettoyage">Nettoyage</option>
+        </select>
+      </label>
+      <label class="full">Commentaire<textarea id="fComment" rows="3" maxlength="500" placeholder="Motif du retard, blocage ou information utile..."></textarea></label>
+    </div>
+    <div id="formError" class="form-error"></div>
+    <div class="modal-actions">
+      <button class="btn-danger" id="deleteActivityBtn" type="button" onclick="deleteCurrentActivity()">Supprimer</button>
+      <div class="modal-actions-right">
+        <button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('activityDialog'))">Annuler</button>
+        <button class="btn-primary" type="submit">Enregistrer</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+
+<dialog id="pinDialog" aria-labelledby="pinTitle">
+  <form class="modal compact" onsubmit="submitPlannerPin(event)" novalidate>
+    <h2 id="pinTitle">Accès Planificateur</h2>
+    <p class="hint" id="pinHelp"></p>
+    <div class="form-grid">
+      <label class="full">PIN<input id="plannerPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" pattern="[0-9]{4,8}" required /></label>
+      <label class="full" id="pinConfirmLabel">Confirmer le PIN<input id="plannerPinConfirm" type="password" inputmode="numeric" autocomplete="off" maxlength="8" pattern="[0-9]{4,8}" /></label>
+    </div>
+    <div id="pinError" class="form-error"></div>
+    <div class="modal-actions"><span></span><div class="modal-actions-right"><button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('pinDialog'))">Annuler</button><button class="btn-primary" type="submit">Déverrouiller</button></div></div>
+  </form>
+</dialog>
+
+<dialog id="settingsDialog" aria-labelledby="settingsTitle">
+  <form class="modal" onsubmit="saveSettings(event)" novalidate>
+    <h2 id="settingsTitle">Paramètres du dashboard</h2>
+    <div class="settings-section">
+      <h3>Capacité d’occupation</h3>
+      <div class="form-grid">
+        <label>Durée d’une équipe (h)<input id="settingsHoursPerTeam" type="number" min="1" max="12" step="0.5" required /></label>
+        <label>Nombre d’équipes en semaine<input id="settingsWeekdayTeams" type="number" min="1" max="4" step="1" required /></label>
+        <label class="full checkbox-row"><input id="settingsIncludeSaturday" type="checkbox" onchange="toggleSaturdaySettings()" /> Inclure le samedi dans la capacité</label>
+        <label>Équipes le samedi<input id="settingsSaturdayTeams" type="number" min="1" max="4" step="1" /></label>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>PIN Planificateur — repli hors-ligne</h3>
+      <div class="form-grid">
+        <label>Nouveau PIN<input id="settingsPin" type="password" inputmode="numeric" maxlength="8" placeholder="Laisser vide pour conserver" /></label>
+        <label>Confirmer<input id="settingsPinConfirm" type="password" inputmode="numeric" maxlength="8" /></label>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>Stockage local</h3>
+      <div id="storageInfo" class="hint"></div>
+      <div class="storage-track"><div class="storage-fill" id="storageFill"></div></div>
+      <p class="hint">Exportez une sauvegarde JSON avant toute purge. Le seuil de 5 Mo est une référence prudente ; la limite réelle dépend du navigateur.</p>
+      <div class="form-grid">
+        <label>Mois de coupure<input id="purgeBeforeMonth" type="month" /></label>
+        <label style="justify-content:flex-end"><span>&nbsp;</span><button class="btn-danger" type="button" onclick="requestPurge()">Purger les mois antérieurs</button></label>
+      </div>
+    </div>
+    <p class="hint" id="timezoneInfo"></p>
+    <div id="settingsError" class="form-error"></div>
+    <div class="modal-actions"><span></span><div class="modal-actions-right"><button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('settingsDialog'))">Annuler</button><button class="btn-primary" type="submit">Enregistrer</button></div></div>
+  </form>
+</dialog>
+
+<dialog id="confirmDialog" aria-labelledby="confirmTitle">
+  <div class="modal compact">
+    <h2 id="confirmTitle">Confirmation</h2>
+    <p id="confirmMessage" style="line-height:1.5;color:var(--muted)"></p>
+    <div class="modal-actions"><span></span><div class="modal-actions-right"><button class="btn-soft" id="confirmCancelBtn" type="button" onclick="closeDialog(document.getElementById('confirmDialog'))">Annuler</button><button class="btn-primary" id="confirmActionBtn" type="button" onclick="runConfirmAction()">Confirmer</button></div></div>
+  </div>
+</dialog>
+
+<dialog id="detailDialog" aria-labelledby="detailTitle">
+  <div class="modal">
+    <h2 id="detailTitle">Détail de l’activité</h2>
+    <div id="detailContent"></div>
+    <div class="modal-actions"><span></span><button class="btn-primary" id="closeDetailBtn" type="button" onclick="closeDialog(document.getElementById('detailDialog'))">Fermer</button></div>
+  </div>
+</dialog>
+
+<dialog id="dayDetailDialog" aria-labelledby="dayDetailTitle">
+  <div class="modal compact">
+    <h2 id="dayDetailTitle">Activités du jour</h2>
+    <div class="detail-list" id="dayDetailContent"></div>
+    <div class="modal-actions"><span></span><button class="btn-primary" id="closeDayDetailBtn" type="button" onclick="closeDialog(document.getElementById('dayDetailDialog'))">Fermer</button></div>
+  </div>
+</dialog>
+
+<dialog id="authDialog" aria-labelledby="authTitle">
+  <form class="modal compact" onsubmit="loginSupabase(event)" novalidate>
+    <h2 id="authTitle">Connexion multi-utilisateurs</h2>
+    <div class="auth-summary" id="authSummary"><strong>Mode local</strong><span class="hint">Supabase n’est pas encore connecté.</span></div>
+    <div class="form-grid">
+      <label class="full">Adresse e-mail<input id="authEmail" type="email" autocomplete="username" required placeholder="prenom.nom@entreprise.tn" /></label>
+      <label class="full">Mot de passe<input id="authPassword" type="password" autocomplete="current-password" placeholder="Mot de passe Supabase" /></label>
+    </div>
+    <div id="authError" class="form-error"></div>
+    <div class="settings-section">
+      <h3>Synchronisation</h3>
+      <p class="hint" id="authSyncInfo">Les données restent utilisables localement lorsque le serveur est indisponible.</p>
+      <div class="mini-actions">
+        <button class="btn-soft" id="migrateLocalBtn" type="button" onclick="migrateLocalToSupabase()">Migrer les données locales</button>
+        <button class="btn-soft" id="retrySyncBtn" type="button" onclick="retrySyncQueue()">Réessayer les éléments bloqués</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-soft" type="button" onclick="sendMagicLinkSupabase()">Envoyer un magic link</button>
+      <div class="modal-actions-right"><button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('authDialog'))">Fermer</button><button class="btn-primary" type="submit">Se connecter</button></div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="roomsDialog" aria-labelledby="roomsTitle">
+  <div class="modal">
+    <h2 id="roomsTitle">Gestion des locaux</h2>
+    <p class="hint">Un local désactivé reste lié à son historique, mais n’est plus proposé pour les nouvelles activités.</p>
+    <div class="room-admin-list" id="roomAdminList"></div>
+    <div class="settings-section">
+      <h3>Ajouter un local</h3>
+      <div class="form-grid">
+        <label>Nom<input id="newRoomName" maxlength="120" placeholder="Ex. Local 5 — Pesée" /></label>
+        <label>Zone<input id="newRoomZone" maxlength="120" value="Zone de production" /></label>
+      </div>
+    </div>
+    <div id="roomsError" class="form-error"></div>
+    <div class="modal-actions"><button class="btn-primary" type="button" onclick="addRoom()">Ajouter</button><button class="btn-soft" id="closeRoomsBtn" type="button" onclick="closeDialog(document.getElementById('roomsDialog'))">Fermer</button></div>
+  </div>
+</dialog>
+
+<dialog id="stockDialog" aria-labelledby="stockTitle">
+  <div class="modal" style="max-width:860px">
+    <h2 id="stockTitle">A26 — Mouvements stock (E/S)</h2>
+    <p class="hint">Quantités <strong>théoriques</strong>. Manager et Planificateur peuvent saisir. Corrigeable à tout moment.</p>
+    <form class="form-grid" onsubmit="saveMovement(event)" id="stockForm">
+      <label>Sens
+        <select id="mSens" required>
+          <option value="entree">Entrée</option>
+          <option value="sortie">Sortie</option>
+        </select>
+      </label>
+      <label>Article
+        <select id="mArticle" required></select>
+      </label>
+      <label>Lot<input id="mBatch" maxlength="50" placeholder="ex. 26001" /></label>
+      <label>Qté théorique<input id="mQty" type="number" min="0" step="any" required /></label>
+      <label>Unité<input id="mUnit" maxlength="20" /></label>
+      <label>Nb fûts<input id="mFuts" type="number" min="0" max="20" step="1" value="0" /></label>
+      <label>Origine / Destination<input id="mPlace" maxlength="80" placeholder="A27, A28, retour, …" /></label>
+      <label class="full">Commentaire<input id="mComment" maxlength="200" /></label>
+      <div class="modal-actions" style="grid-column:1/-1">
+        <button class="btn-primary" type="submit">Enregistrer le mouvement</button>
+        <button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('stockDialog'))">Fermer</button>
+      </div>
+    </form>
+    <div class="table-wrap" style="max-height:280px;margin-top:12px">
+      <table>
+        <thead><tr><th>Quand</th><th>Sens</th><th>Article</th><th>Lot</th><th>Qté th.</th><th>Lieu</th><th>Par</th></tr></thead>
+        <tbody id="stockBody"></tbody>
+      </table>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="articlesDialog" aria-labelledby="articlesTitle">
+  <div class="modal" style="max-width:820px">
+    <h2 id="articlesTitle">Articles (programmation superviseur)</h2>
+    <p class="hint">FSF / PF / pochettes / MP. Création et édition par le Planificateur.</p>
+    <div class="form-grid">
+      <label>Code<input id="artCode" maxlength="20" placeholder="FSF600" /></label>
+      <label>Libellé<input id="artLabel" maxlength="120" /></label>
+      <label>Famille
+        <select id="artFamily">
+          <option value="MP">MP</option>
+          <option value="SF">SF</option>
+          <option value="pochette">Pochette</option>
+          <option value="PF">PF</option>
+        </select>
+      </label>
+      <label>Unité<input id="artUnit" maxlength="20" value="gélules" /></label>
+      <label>Qté th. défaut<input id="artQty" type="number" min="0" step="any" value="360000" /></label>
+      <label>Fûts défaut<input id="artFuts" type="number" min="0" max="20" value="10" /></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" type="button" onclick="saveArticleFromForm()">Enregistrer l’article</button>
+      <button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('articlesDialog'))">Fermer</button>
+    </div>
+    <div class="table-wrap" style="max-height:300px;margin-top:12px">
+      <table>
+        <thead><tr><th>Code</th><th>Libellé</th><th>Famille</th><th>Qté th.</th><th>Unité</th><th></th></tr></thead>
+        <tbody id="articlesBody"></tbody>
+      </table>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="csvDialog" aria-labelledby="csvTitle">
+  <div class="modal" style="max-width:900px">
+    <h2 id="csvTitle">Import planning CSV (Excel)</h2>
+    <p class="hint">Excel → Enregistrer sous CSV UTF-8 (séparateur ;). <strong>Étape de relecture obligatoire</strong> avant application. Seules les lignes <code>planned</code> nouvelles ou existantes encore planifiées sont mises à jour. Live / terminé protégés.</p>
+    <div class="modal-actions" style="margin-bottom:10px">
+      <button class="btn-soft" type="button" onclick="downloadCsvTemplate()">Télécharger modèle CSV</button>
+      <label class="btn-soft" style="cursor:pointer">Charger un CSV<input id="csvFile" type="file" accept=".csv,text/csv" hidden onchange="previewCsvFile(event)" /></label>
+      <button class="btn-primary" type="button" id="csvApplyBtn" disabled onclick="applyCsvPreview()">Appliquer le planning</button>
+      <button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('csvDialog'))">Fermer</button>
+    </div>
+    <div id="csvPreviewMeta" class="hint"></div>
+    <div class="table-wrap" style="max-height:360px;margin-top:8px">
+      <table>
+        <thead><tr><th>Local</th><th>Type</th><th>Article</th><th>Lot</th><th>Début</th><th>Fin</th><th>Action prévue</th></tr></thead>
+        <tbody id="csvPreviewBody"></tbody>
+      </table>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="printReport"></div>
+
+<script src="./plant-domain.js"></script>
+<script>
+'use strict';
+
+const STORAGE_KEY = 'pharma_ops_dashboard_v2';
+const LEGACY_ROOMS_KEY = 'pharma_rooms';
+const LEGACY_HISTORY_KEY = 'pharma_history';
+const STORAGE_SOFT_LIMIT = 5 * 1024 * 1024;
+const MAX_CHANGE_LOG = 200;
+const DELAY_LABELS = {
+  none:'Aucun',
+  panne:'Panne',
+  attente_reglage:'Attente réglage',
+  changement_format:'Changement de format',
+  nettoyage:'Nettoyage',
+  uncategorized:'À catégoriser'
+};
+const STATUS_LABELS = {
+  planned:'Planifiée', running:'En cours', paused:'En pause', complete:'Terminée', cancelled:'Annulée'
+};
+const ACTIVITY_TYPES = ['Lot en cours','Nettoyage','Intervention maintenance'];
+const HYGIENE_LABELS = { propre:'Propre', a_nettoyer:'À nettoyer' };
+const OCCUPATION_LABELS = { disponible:'Disponible', en_production:'En production (indicatif)' };
+
+/** Catalogue usine : produits / flux autorisés par type de local */
+const PRODUCT_OPTIONS_BY_KIND = {
+  process: [
+    'Aerofor 12 µg','Aeronide 200 µg','Aeronide 400 µg'
+  ],
+  geluleuse: [
+    'Aerofor 12 µg','Aeronide 200 µg','Aeronide 400 µg'
+  ],
+  stock_primaire: [
+    'SF gélule remplie · Aerofor 12 µg',
+    'SF gélule remplie · Aeronide 200 µg',
+    'SF gélule remplie · Aeronide 400 µg',
+    'MP pesée',
+    'MF'
+  ],
+  blistereuse: [
+    'Aerofor 12 µg · Boîte de 30',
+    'Aerofor 12 µg · Boîte de 60',
+    'Aerofor 12 µg · Pochette pour Combifor 12/200',
+    'Aerofor 12 µg · Pochette pour Combifor 12/400',
+    'Aeronide 200 µg · Boîte de 60',
+    'Aeronide 200 µg · Pochette pour Combifor 12/200',
+    'Aeronide 400 µg · Boîte de 60',
+    'Aeronide 400 µg · Pochette pour Combifor 12/400'
+  ],
+  cond_sec_continuite: [
+    'Aerofor 12 µg · Boîte de 30 (mise en étui)',
+    'Aerofor 12 µg · Boîte de 60 (mise en étui)',
+    'Aeronide 200 µg · Boîte de 60 (mise en étui)',
+    'Aeronide 400 µg · Boîte de 60 (mise en étui)'
+  ],
+  cond_sec_assemblage: [
+    'Combifor 12/200 µg (assemblage)',
+    'Combifor 12/400 µg (assemblage)',
+    'Stock pochette Aerofor 12 · pour Combifor 12/200',
+    'Stock pochette Aerofor 12 · pour Combifor 12/400',
+    'Stock pochette Aeronide 200 · pour Combifor 12/200',
+    'Stock pochette Aeronide 400 · pour Combifor 12/400'
+  ],
+  generique: ['—']
+};
+
+const DEFAULT_PLANT_ROOMS = [
+  {id:1,code:'A23',name:'A23 — Box de process',zone:'Pesée + mélange + prélèvement',kind:'process',hygiene:'propre',isActive:true},
+  {id:2,code:'A27',name:'A27 — Géluleuse',zone:'Remplissage gélules',kind:'geluleuse',hygiene:'propre',isActive:true},
+  {id:3,code:'A26',name:'A26 — Stockage primaire',zone:'SF gélule remplie · MP pesée · MF',kind:'stock_primaire',hygiene:'propre',isActive:true},
+  {id:4,code:'A28',name:'A28 — Blistéreuse',zone:'Conditionnement primaire · mise sous blister',kind:'blistereuse',hygiene:'propre',isActive:true},
+  {id:5,code:'D08',name:'D08 — Cond. secondaire continuité',zone:'Mise en étui · continuité A28',kind:'cond_sec_continuite',hygiene:'propre',isActive:true},
+  {id:6,code:'D18',name:'D18 — Cond. secondaire assemblage',zone:'Assemblage Combifor · stock pochettes en attente',kind:'cond_sec_assemblage',hygiene:'propre',isActive:true}
+];
+
+function roomKindFromCode(code){
+  const map={A23:'process',A27:'geluleuse',A26:'stock_primaire',A28:'blistereuse',D08:'cond_sec_continuite',D18:'cond_sec_assemblage'};
+  return map[String(code||'').toUpperCase()]||'generique';
+}
+function productOptionsForRoom(room){
+  const kind=room?.kind||roomKindFromCode(room?.code)||'generique';
+  return PRODUCT_OPTIONS_BY_KIND[kind]||PRODUCT_OPTIONS_BY_KIND.generique;
+}
+function enrichRoom(room,index=0){
+  const code=String(room.code||'').trim().toUpperCase()||(String(room.name||'').match(/\b([AD]\d{2})\b/i)||[])[1]?.toUpperCase()||'';
+  const kind=room.kind||roomKindFromCode(code)||'generique';
+  const hygiene=room.hygiene==='a_nettoyer'?'a_nettoyer':'propre';
+  return {
+    id:Number(room.id)||index+1,
+    code,
+    name:room.name||(code?`${code} — Local`:`Local ${index+1}`),
+    zone:room.zone||'Zone de production',
+    kind,
+    hygiene,
+    isActive:room.isActive!==false,
+    createdAt:room.createdAt||'',
+    updatedAt:room.updatedAt||''
+  };
+}
+function looksLikeLegacyDemoRooms(rooms){
+  if(!Array.isArray(rooms)||!rooms.length) return true;
+  return rooms.every(r=>/^Local\s+\d/i.test(String(r.name||''))) && rooms.length<=4;
+}
+function occupationOfRoom(roomId){
+  // Indicatif uniquement : activité running/paused sur le local.
+  const busy=state.activities.some(a=>Number(a.roomId)===Number(roomId)&&(a.status==='running'||a.status==='paused'));
+  return busy?'en_production':'disponible';
+}
+function composeActivityLabel(type,product){
+  if(type==='Nettoyage') return 'Nettoyage';
+  if(type==='Intervention maintenance') return 'Intervention maintenance';
+  if(product&&product!=='—') return `Lot en cours · ${product}`;
+  return 'Lot en cours';
+}
+function parseActivityType(activityName){
+  const name=String(activityName||'');
+  if(/^Nettoyage/i.test(name)) return 'Nettoyage';
+  if(/Intervention maintenance|Maintenance/i.test(name)) return 'Intervention maintenance';
+  return 'Lot en cours';
+}
+
+let currentView = 'realtime';
+let pendingAutoRefresh = false;
+let confirmAction = null;
+let pendingImportState = null;
+let lastFocusedElement = null;
+let pinDialogMode = 'unlock';
+let plannerUnlocked = false;
+try { plannerUnlocked = sessionStorage.getItem('pharma_planner_unlocked') === '1'; } catch (_) {}
+let state; state = loadState();
+if (!plannerUnlocked) state.profile = 'manager';
+
+function pad(value){ return String(value).padStart(2,'0'); }
+function localDateTimeValue(date){
+  const d = new Date(date);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function localDateValue(date){
+  const d = new Date(date);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function monthValue(date){
+  const d = new Date(date);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+}
+function addHours(date,hours){ return new Date(new Date(date).getTime()+hours*3600000); }
+function addDays(date,days){ const d=new Date(date); d.setDate(d.getDate()+days); return d; }
+function dateAt(year,monthIndex,day,hour,minute=0){ return new Date(year,monthIndex,day,hour,minute,0,0); }
+function startOfDay(date){ const d=new Date(date); d.setHours(0,0,0,0); return d; }
+function endOfDay(date){ const d=new Date(date); d.setHours(23,59,59,999); return d; }
+function startOfMonthFromValue(value){ const [y,m]=String(value).split('-').map(Number); return new Date(y,m-1,1,0,0,0,0); }
+function endOfMonthFromValue(value){ const [y,m]=String(value).split('-').map(Number); return new Date(y,m,0,23,59,59,999); }
+function minutesBetween(a,b){ return Math.round((new Date(a)-new Date(b))/60000); }
+function clamp(value,min,max){ return Math.max(min,Math.min(max,value)); }
+function escapeHTML(value){
+  return String(value ?? '').replace(/[&<>'"]/g,char=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'
+  }[char]));
+}
+function fmtDate(value){
+  if(!value) return '—';
+  const d=new Date(value);
+  return Number.isNaN(d.getTime())?'—':d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function fmtTime(value){
+  if(!value) return '—';
+  const d=new Date(value);
+  return Number.isNaN(d.getTime())?'—':d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtDateTime(value){
+  if(!value) return '—';
+  const d=new Date(value);
+  return Number.isNaN(d.getTime())?'—':d.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function fmtMonth(value){
+  const d=startOfMonthFromValue(value);
+  return d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
+}
+function uid(prefix='act'){ return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`; }
+function timezoneLabel(){
+  const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'heure locale du poste';
+  const offset=-new Date().getTimezoneOffset();
+  const sign=offset>=0?'+':'-';
+  return `${zone} (UTC${sign}${pad(Math.floor(Math.abs(offset)/60))}:${pad(Math.abs(offset)%60)})`;
+}
+function bytesLabel(bytes){
+  if(bytes<1024) return `${bytes} o`;
+  if(bytes<1024*1024) return `${(bytes/1024).toFixed(1)} Ko`;
+  return `${(bytes/1024/1024).toFixed(2)} Mo`;
+}
+function stateBytes(value=state){
+  try{return new Blob([JSON.stringify(value)]).size;}catch(_){return 0;}
+}
+
+function defaultSettings(){
+  return {hoursPerTeam:8,weekdayTeams:2,includeSaturday:false,saturdayTeams:1};
+}
+function buildSeedState(){
+  const today=new Date();
+  const y=today.getFullYear(), m=today.getMonth();
+  const day=Math.max(3,Math.min(today.getDate(),25));
+  const rooms=DEFAULT_PLANT_ROOMS.map((r,i)=>enrichRoom({...r,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},i));
+  const make=(roomId,offset,startHour,duration,status,activity,product,batch,progress,delayCategory='none',comment='',step='')=>{
+    const planStart=dateAt(y,m,day+offset,startHour,0);
+    const planEnd=addHours(planStart,duration);
+    let actualStart='',actualEnd='';
+    if(['running','paused','complete'].includes(status)) actualStart=localDateTimeValue(addHours(planStart,.15));
+    if(status==='complete') actualEnd=localDateTimeValue(addHours(planEnd,delayCategory==='none'?-0.15:0.75));
+    return {id:uid(),roomId,activity,product,batch,team:roomId%2?'Équipe A':'Équipe B',owner:'Responsable production',planStart:localDateTimeValue(planStart),planEnd:localDateTimeValue(planEnd),actualStart,actualEnd,progress,status,step:step||(status==='complete'?'Clôturée':status==='planned'?'À démarrer':'Étape opérationnelle'),comment,delayCategory,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  };
+  // ids: 1 A23 process, 2 A27 géluleuse, 3 A26 stock, 4 A28 blister, 5 D08 étui, 6 D18 assemblage
+  const activities=[
+    make(1,0,8,4,'running','Lot en cours · Aerofor 12 µg','Aerofor 12 µg','AF12-260701',72,'none','Pesée + mélange en cours.','Mélange'),
+    make(2,0,7,4,'paused','Lot en cours · Aeronide 200 µg','Aeronide 200 µg','AN200-260699',58,'attente_reglage','Réglage dose géluleuse.','Remplissage'),
+    make(3,0,9,2,'running','Lot en cours · SF gélule remplie · Aerofor 12 µg','SF gélule remplie · Aerofor 12 µg','SF-AF12-01',40,'none','Stock SF gélules remplies.','Stockage SF'),
+    make(4,0,8,6,'running','Lot en cours · Aerofor 12 µg · Boîte de 30','Aerofor 12 µg · Boîte de 30','BL-AF12-30',45,'none','Mise sous blister.','Blister'),
+    make(5,0,10,4,'planned','Lot en cours · Aerofor 12 µg · Boîte de 30 (mise en étui)','Aerofor 12 µg · Boîte de 30 (mise en étui)','ET-AF12-30',0,'none','Continuité A28 → D08.','Mise en étui'),
+    make(6,0,13,3,'planned','Lot en cours · Combifor 12/200 µg (assemblage)','Combifor 12/200 µg (assemblage)','CF12200-01',0,'none','Assemblage pochettes Aerofor + Aeronide 200.','Assemblage'),
+    make(4,-1,8,5,'complete','Lot en cours · Aeronide 200 µg · Pochette pour Combifor 12/200','Aeronide 200 µg · Pochette pour Combifor 12/200','BL-AN200-P',100,'none','Pochettes pour D18.','Blister'),
+    make(1,-1,8,3,'complete','Nettoyage','—','—',100,'none','Fin de lot process.','Nettoyage'),
+    make(2,-2,7,4,'complete','Lot en cours · Aeronide 400 µg','Aeronide 400 µg','AN400-260697',100,'none','',''),
+    make(6,2,9,4,'planned','Lot en cours · Stock pochette Aerofor 12 · pour Combifor 12/400','Stock pochette Aerofor 12 · pour Combifor 12/400','STK-AF12-400',0,'none','Pochettes en attente d’assemblage.','Stock pochettes'),
+    make(5,3,8,4,'planned','Lot en cours · Aeronide 400 µg · Boîte de 60 (mise en étui)','Aeronide 400 µg · Boîte de 60 (mise en étui)','ET-AN400-60',0,'none','',''),
+    make(3,1,14,2,'planned','Intervention maintenance','—','—',0,'none','Contrôle pesée / stockage.','Maintenance')
+  ];
+  const articles=(PD()?.DEFAULT_ARTICLES||[]).map((a,i)=>PD().normalizeArticle(a,i));
+  return {
+    version:3,
+    profile:'manager',
+    selectedMonth:monthValue(today),
+    rooms,
+    activities,
+    articles,
+    movements:[],
+    settings:defaultSettings(),
+    security:{plannerPinHash:''},
+    changeLog:[{id:uid('log'),timestamp:new Date().toISOString(),action:'Initialisation',detail:'Seed usine A23/A27/A26/A28/D08/D18 + articles FSF/PF.'}],
+    lastSavedAt:''
+  };
+}
+
+function normalizeState(value){
+  const fallback=buildSeedState();
+  const rawSettings=value.settings||{};
+  const settings={
+    hoursPerTeam:clamp(Number(rawSettings.hoursPerTeam)||8,1,12),
+    weekdayTeams:clamp(Math.round(Number(rawSettings.weekdayTeams)||2),1,4),
+    includeSaturday:Boolean(rawSettings.includeSaturday),
+    saturdayTeams:clamp(Math.round(Number(rawSettings.saturdayTeams)||1),1,4)
+  };
+  const rawRooms=Array.isArray(value.rooms)&&value.rooms.length?value.rooms:fallback.rooms;
+  const rooms=looksLikeLegacyDemoRooms(rawRooms)
+    ? fallback.rooms.map((r,i)=>enrichRoom(r,i))
+    : rawRooms.map((r,i)=>enrichRoom(r,i));
+  return {
+    version:3,
+    profile:value.profile==='planner'?'planner':'manager',
+    selectedMonth:/^\d{4}-\d{2}$/.test(value.selectedMonth||'')?value.selectedMonth:monthValue(new Date()),
+    rooms,
+    activities:Array.isArray(value.activities)?value.activities.map(a=>({
+      id:a.id||uid(),roomId:Number(a.roomId),activity:a.activity||'Activité',product:a.product||'—',batch:a.batch||'—',team:a.team||'Équipe A',owner:a.owner||'—',
+      planStart:a.planStart||'',planEnd:a.planEnd||'',actualStart:a.actualStart||'',actualEnd:a.actualEnd||'',progress:clamp(Number(a.progress)||0,0,100),
+      status:['planned','running','paused','complete','cancelled'].includes(a.status)?a.status:'planned',step:a.step||'',comment:a.comment||'',delayCategory:DELAY_LABELS[a.delayCategory]?a.delayCategory:'none',
+      createdAt:a.createdAt||new Date().toISOString(),updatedAt:a.updatedAt||new Date().toISOString()
+    })):[],
+    articles:Array.isArray(value.articles)&&value.articles.length
+      ? value.articles.map((a,i)=>PD()?PD().normalizeArticle(a,i):a)
+      : (PD()?.DEFAULT_ARTICLES||[]).map((a,i)=>PD().normalizeArticle(a,i)),
+    movements:Array.isArray(value.movements)?value.movements.map(m=>({
+      id:m.id||uid('mv'),sens:m.sens==='sortie'?'sortie':'entree',
+      articleCode:String(m.articleCode||'').toUpperCase(),batch:m.batch||'—',
+      qty:Number(m.qty)||0,unit:m.unit||'u',futs:Number(m.futs)||0,
+      place:m.place||'',comment:m.comment||'',
+      at:m.at||new Date().toISOString(),by:m.by||'—'
+    })):[],
+    settings,
+    security:{plannerPinHash:String(value.security?.plannerPinHash||'')},
+    changeLog:Array.isArray(value.changeLog)?value.changeLog.slice(-MAX_CHANGE_LOG).map(log=>({id:log.id||uid('log'),timestamp:log.timestamp||new Date().toISOString(),action:log.action||'Modification',detail:log.detail||''})):[],
+    lastSavedAt:value.lastSavedAt||''
+  };
+}
+
+function migrateLegacyState(){
+  try{
+    const oldRooms=JSON.parse(localStorage.getItem(LEGACY_ROOMS_KEY)||'null');
+    const oldHistory=JSON.parse(localStorage.getItem(LEGACY_HISTORY_KEY)||'null');
+    if(!Array.isArray(oldRooms) && !Array.isArray(oldHistory)) return null;
+    const base=buildSeedState();
+    const rooms=Array.isArray(oldRooms)&&oldRooms.length?oldRooms.map((r,index)=>({id:Number(r.id)||index+1,name:r.name||`Local ${index+1}`,zone:r.zone||'Zone de production'})):base.rooms;
+    const activities=[];
+    (oldRooms||[]).forEach(r=>{
+      if(!r.planStart||!r.planEnd) return;
+      activities.push({id:uid(),roomId:Number(r.id),activity:r.activity||'Activité',product:r.product||'—',batch:r.batch||'—',team:r.team||'Équipe A',owner:r.owner||'—',planStart:r.planStart,planEnd:r.planEnd,actualStart:r.status==='running'||r.status==='paused'?r.planStart:'',actualEnd:'',progress:clamp(Number(r.progress)||0,0,100),status:r.status==='idle'?'planned':r.status==='complete'?'complete':r.status==='paused'?'paused':'running',step:r.step||'',comment:r.comment||'',delayCategory:r.status==='paused'?'attente_reglage':'none',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+    });
+    (oldHistory||[]).forEach((h,index)=>{
+      const room=rooms.find(r=>r.name.startsWith(h.room))||rooms[index%rooms.length];
+      const start=`${h.date}T${h.planStart||'08:00'}`;
+      const end=`${h.date}T${h.realEnd||'09:00'}`;
+      activities.push({id:uid(),roomId:room.id,activity:h.activity||'Activité terminée',product:'—',batch:h.batch||'—',team:'Équipe A',owner:'—',planStart:start,planEnd:end,actualStart:start,actualEnd:end,progress:100,status:'complete',step:'Clôturée',comment:'Import de l’ancienne version',delayCategory:h.status==='Retard'?'uncategorized':'none',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+    });
+    const migrated=normalizeState({version:3,profile:'manager',selectedMonth:monthValue(new Date()),rooms,activities,settings:defaultSettings(),changeLog:[{timestamp:new Date().toISOString(),action:'Migration',detail:'Import des données de la version précédente.'}]});
+    return migrated;
+  }catch(error){
+    console.warn('Migration des anciennes données impossible :',error);
+    return null;
+  }
+}
+
+function loadState(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed=JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.rooms) && Array.isArray(parsed.activities)) return normalizeState(parsed);
+    }
+  }catch(error){
+    console.warn('Lecture du stockage impossible :',error);
+    setTimeout(()=>showToast('Le stockage local n’a pas pu être lu. Les données de démonstration sont utilisées.','bad'),0);
+  }
+  const migrated=migrateLegacyState();
+  if(migrated){ safePersist(migrated); return migrated; }
+  const seeded=buildSeedState();
+  safePersist(seeded);
+  return seeded;
+}
+
+function logChange(action,detail){
+  state.changeLog.push({id:uid('log'),timestamp:new Date().toISOString(),action,detail});
+  if(state.changeLog.length>MAX_CHANGE_LOG) state.changeLog=state.changeLog.slice(-MAX_CHANGE_LOG);
+}
+function safePersist(nextState=state){
+  try{
+    nextState.lastSavedAt=new Date().toISOString();
+    const serialized=JSON.stringify(nextState);
+    localStorage.setItem(STORAGE_KEY,serialized);
+    if(nextState===state){
+      renderSavedStatus();
+      const bytes=new Blob([serialized]).size;
+      if(bytes>STORAGE_SOFT_LIMIT*.70 && !safePersist.storageWarningShown){
+        safePersist.storageWarningShown=true;
+        setTimeout(()=>showToast(`Le stockage local atteint ${bytesLabel(bytes)}. Exportez une sauvegarde JSON et archivez les mois anciens.`,'bad'),0);
+      }
+    }
+    return true;
+  }catch(error){
+    console.error('Écriture du stockage impossible :',error);
+    showToast('Impossible d’enregistrer dans le navigateur. Exportez une sauvegarde JSON puis purgez les mois anciens.','bad');
+    return false;
+  }
+}
+
+function showToast(message,type=''){
+  const toast=document.getElementById('toast');
+  if(!toast) return;
+  toast.textContent=message;
+  toast.className=`toast ${type} show`;
+  clearTimeout(showToast.timer);
+  showToast.timer=setTimeout(()=>{toast.className='toast';},3600);
+}
+function renderSavedStatus(){
+  const el=document.getElementById('savedStatus');
+  if(!el) return;
+  const time=state.lastSavedAt?new Date(state.lastSavedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'—';
+  el.textContent=`Données à jour · ${time}`;
+  el.title=`Dernière sauvegarde locale : ${state.lastSavedAt?new Date(state.lastSavedAt).toLocaleString('fr-FR'):'non disponible'}`;
+}
+function renderStorageStatus(){
+  const bytes=stateBytes();
+  const ratio=Math.min(100,Math.round(bytes/STORAGE_SOFT_LIMIT*100));
+  const text=document.getElementById('storageInfo');
+  const fill=document.getElementById('storageFill');
+  if(text) text.textContent=`${bytesLabel(bytes)} utilisés sur une référence prudente de 5 Mo (${ratio} %).`;
+  if(fill) fill.style.width=`${ratio}%`;
+}
+
+function isPlanner(){ return state.profile==='planner'; }
+function canWriteStock(){ return state.profile==='planner' || state.profile==='manager'; }
+function PD(){ return window.PlantDomain || null; }
+function getArticles(){
+  if(!Array.isArray(state.articles)||!state.articles.length){
+    state.articles=(PD()?.DEFAULT_ARTICLES||[]).map((a,i)=>PD().normalizeArticle(a,i));
+  }
+  return state.articles;
+}
+function getArticle(code){
+  return getArticles().find(a=>a.code===String(code||'').toUpperCase());
+}
+function getMovements(){
+  if(!Array.isArray(state.movements)) state.movements=[];
+  return state.movements;
+}
+function getRoom(roomId){ return state.rooms.find(r=>r.id===Number(roomId)); }
+function getActivity(id){ return state.activities.find(a=>a.id===id); }
+function isOnTime(activity){ return activity.status==='complete' && activity.actualEnd && new Date(activity.actualEnd)<=new Date(activity.planEnd); }
+function isOverdue(activity,reference=new Date()){
+  return !['complete','cancelled'].includes(activity.status) && activity.planEnd && new Date(reference)>new Date(activity.planEnd);
+}
+function hasDelay(activity,reference=new Date()){
+  if(activity.status==='cancelled') return false;
+  if(activity.status==='paused') return true;
+  if(activity.status==='complete') return Boolean(activity.actualEnd) && new Date(activity.actualEnd)>new Date(activity.planEnd);
+  return isOverdue(activity,reference);
+}
+function effectiveDelayCategory(activity,reference=new Date()){
+  if(!hasDelay(activity,reference)) return 'none';
+  return activity.delayCategory==='none'?'uncategorized':activity.delayCategory;
+}
+function monthReference(month=state.selectedMonth){
+  const end=endOfMonthFromValue(month);
+  return new Date(Math.min(Date.now(),end.getTime()));
+}
+function expectedProgress(activity,reference=new Date()){
+  const start=new Date(activity.planStart),end=new Date(activity.planEnd),ref=new Date(reference);
+  if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime())||end<=start) return 0;
+  return clamp(((ref-start)/(end-start))*100,0,100);
+}
+function activityVisualState(activity,reference=new Date()){
+  if(!activity) return {cls:'idle',label:'Disponible',message:'Aucune activité au créneau sélectionné',delayCls:'ok'};
+  if(activity.status==='cancelled') return {cls:'idle',label:'Annulée',message:'Activité annulée',delayCls:'info'};
+  if(activity.status==='complete'){
+    if(isOnTime(activity)) return {cls:'ok',label:'Terminée à l’heure',message:'Planning respecté',delayCls:'ok'};
+    const delay=Math.max(0,minutesBetween(activity.actualEnd,activity.planEnd));
+    return {cls:'bad',label:'Terminée en retard',message:`Retard de ${delay} min`,delayCls:'bad'};
+  }
+  if(activity.status==='paused') return {cls:'warn',label:'En pause',message:`Blocage : ${DELAY_LABELS[effectiveDelayCategory(activity,reference)]}`,delayCls:'warn'};
+  if(isOverdue(activity,reference)){
+    const delay=Math.max(0,minutesBetween(reference,activity.planEnd));
+    return {cls:'bad',label:'En retard',message:`Retard de ${delay} min`,delayCls:'bad'};
+  }
+  if(activity.status==='planned'){
+    if(new Date(reference)<new Date(activity.planStart)) return {cls:'info',label:'Planifiée',message:`Démarrage prévu à ${fmtTime(activity.planStart)}`,delayCls:'info'};
+    return {cls:'warn',label:'À démarrer',message:'Créneau planifié commencé',delayCls:'warn'};
+  }
+  const gap=activity.progress-expectedProgress(activity,reference);
+  if(gap<-15) return {cls:'warn',label:'À surveiller',message:`Avancement inférieur au prévu de ${Math.abs(Math.round(gap))} points`,delayCls:'warn'};
+  return {cls:'ok',label:'En cours',message:'Avancement conforme au planning',delayCls:'ok'};
+}
+
+function monthActivities(month=state.selectedMonth){
+  const start=startOfMonthFromValue(month),end=endOfMonthFromValue(month);
+  return state.activities.filter(a=>{
+    if(!a.planStart||!a.planEnd) return false;
+    const aStart=new Date(a.planStart),aEnd=new Date(a.planEnd);
+    return aStart<=end && aEnd>=start;
+  });
+}
+function filteredActivities(list){
+  const status=document.getElementById('statusFilter')?.value||'all';
+  const team=document.getElementById('teamFilter')?.value||'all';
+  const query=(document.getElementById('searchFilter')?.value||'').toLowerCase().trim();
+  const reference=currentView==='monthly'?monthReference(state.selectedMonth):getReferenceTime();
+  return list.filter(a=>{
+    const room=getRoom(a.roomId);
+    const matchTeam=team==='all'||a.team===team;
+    const haystack=[a.activity,a.product,a.batch,a.team,a.owner,room?.name].join(' ').toLowerCase();
+    const matchQuery=!query||haystack.includes(query);
+    const matchStatus=status==='all'||
+      (status==='active'&&['running','paused'].includes(a.status))||
+      (status==='planned'&&a.status==='planned')||
+      (status==='late'&&hasDelay(a,reference))||
+      (status==='complete'&&a.status==='complete');
+    return matchTeam&&matchQuery&&matchStatus;
+  });
+}
+function calendarDayCounts(month){
+  const start=startOfMonthFromValue(month),end=endOfMonthFromValue(month);
+  let weekdays=0,saturdays=0;
+  for(let d=new Date(start);d<=end;d=addDays(d,1)){
+    const day=d.getDay();
+    if(day>=1&&day<=5) weekdays++;
+    if(day===6) saturdays++;
+  }
+  return {weekdays,saturdays};
+}
+function capacityHoursForMonth(month,roomCount=state.rooms.length){
+  const {weekdays,saturdays}=calendarDayCounts(month);
+  const s=state.settings;
+  const weekdayCapacity=weekdays*s.weekdayTeams*s.hoursPerTeam;
+  const saturdayCapacity=s.includeSaturday?saturdays*s.saturdayTeams*s.hoursPerTeam:0;
+  return (weekdayCapacity+saturdayCapacity)*roomCount;
+}
+function capacityDescription(){
+  const s=state.settings;
+  const weekday=`${s.weekdayTeams} équipe(s) × ${s.hoursPerTeam} h du lundi au vendredi`;
+  const saturday=s.includeSaturday?`, samedi inclus avec ${s.saturdayTeams} équipe(s)`:`, samedi exclu`;
+  return `${weekday}${saturday}`;
+}
+function clippedHours(activity,month){
+  const start=startOfMonthFromValue(month),end=endOfMonthFromValue(month);
+  const aStart=new Date(activity.planStart),aEnd=new Date(activity.planEnd);
+  return Math.max(0,(Math.min(aEnd,end)-Math.max(aStart,start))/3600000);
+}
+function monthlyMetrics(month=state.selectedMonth,roomId=null){
+  const all=monthActivities(month).filter(a=>a.status!=='cancelled'&&(roomId===null||a.roomId===roomId));
+  const complete=all.filter(a=>a.status==='complete');
+  const delayed=all.filter(a=>hasDelay(a,monthReference(month)));
+  const avg=all.length?Math.round(all.reduce((sum,a)=>sum+Number(a.progress||0),0)/all.length):0;
+  const respect=complete.length?Math.round(complete.filter(isOnTime).length/complete.length*100):0;
+  const roomCount=roomId===null?state.rooms.length:1;
+  const capacity=capacityHoursForMonth(month,roomCount);
+  const occupied=all.reduce((sum,a)=>sum+clippedHours(a,month),0);
+  const occupancy=capacity?Math.round(occupied/capacity*100):0;
+  return {planned:all.length,complete:complete.length,delayed:delayed.length,avg,respect,occupancy,occupiedHours:occupied,capacityHours:capacity};
+}
+
+function getReferenceTime(){
+  const field=document.getElementById('dateFilter');
+  const selected=field?.value;
+  if(!selected) return new Date();
+  const today=localDateValue(new Date());
+  if(selected===today) return new Date();
+  return new Date(`${selected}T12:00:00`);
+}
+function activitiesForReferenceDate(roomId,reference){
+  const dayStart=startOfDay(reference),dayEnd=endOfDay(reference);
+  return state.activities.filter(a=>a.roomId===roomId&&a.status!=='cancelled'&&new Date(a.planStart)<=dayEnd&&new Date(a.planEnd)>=dayStart).sort((a,b)=>new Date(a.planStart)-new Date(b.planStart));
+}
+function primaryActivity(roomId,reference){
+  const list=activitiesForReferenceDate(roomId,reference);
+  const active=list.find(a=>['running','paused'].includes(a.status));
+  if(active) return active;
+  const current=list.find(a=>new Date(a.planStart)<=reference&&new Date(a.planEnd)>=reference&&a.status!=='complete');
+  if(current) return current;
+  const overdue=list.find(a=>isOverdue(a,reference));
+  if(overdue) return overdue;
+  const next=list.find(a=>new Date(a.planStart)>reference);
+  if(next) return next;
+  return list.filter(a=>a.status==='complete').sort((a,b)=>new Date(b.actualEnd||b.planEnd)-new Date(a.actualEnd||a.planEnd))[0]||null;
+}
+function nextActivity(roomId,reference,currentId){
+  return state.activities.filter(a=>a.roomId===roomId&&a.id!==currentId&&a.status==='planned'&&new Date(a.planStart)>reference).sort((a,b)=>new Date(a.planStart)-new Date(b.planStart))[0]||null;
+}
+
+function openDialog(dialog,focusSelector){
+  if(!dialog) return;
+  lastFocusedElement=document.activeElement;
+  dialog.showModal();
+  requestAnimationFrame(()=>{
+    const target=focusSelector?dialog.querySelector(focusSelector):dialog.querySelector('input,select,button,textarea');
+    target?.focus();
+  });
+}
+function closeDialog(dialog){ if(dialog?.open) dialog.close(); }
+function restoreFocus(){
+  if(lastFocusedElement && document.contains(lastFocusedElement)) lastFocusedElement.focus();
+  lastFocusedElement=null;
+  if(pendingAutoRefresh&&!userIsInteracting()){
+    pendingAutoRefresh=false;
+    setTimeout(()=>renderAll(),0);
+  }
+}
+
+async function hashPin(pin){
+  const text=`pharma-dashboard:${pin}`;
+  if(window.crypto?.subtle){
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+    return 'sha256:'+Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  let hash=5381;
+  for(let i=0;i<text.length;i++) hash=((hash<<5)+hash)^text.charCodeAt(i);
+  return `simple:${hash>>>0}`;
+}
+function requestProfileChange(profile){
+  if(profile!=='planner'){
+    state.profile='manager';
+    safePersist();applyProfile();renderAll();showToast('Profil Manager activé.','ok');
+    return;
+  }
+  if(plannerUnlocked){
+    state.profile='planner';safePersist();applyProfile();renderAll();showToast('Profil Planificateur activé.','ok');
+    return;
+  }
+  document.getElementById('profileSelect').value='manager';
+  pinDialogMode=state.security.plannerPinHash?'unlock':'setup';
+  document.getElementById('pinTitle').textContent=pinDialogMode==='setup'?'Créer le PIN Planificateur':'Accès Planificateur';
+  document.getElementById('pinHelp').textContent=pinDialogMode==='setup'?'Choisissez un PIN de 4 à 8 chiffres. Il protège seulement les actions de modification sur ce navigateur.':'Saisissez le PIN pour déverrouiller les actions de planification.';
+  document.getElementById('pinConfirmLabel').hidden=pinDialogMode!=='setup';
+  document.getElementById('plannerPin').value='';
+  document.getElementById('plannerPinConfirm').value='';
+  document.getElementById('pinError').className='form-error';
+  openDialog(document.getElementById('pinDialog'),'#plannerPin');
+}
+async function submitPlannerPin(event){
+  event.preventDefault();
+  const pin=document.getElementById('plannerPin').value.trim();
+  const confirmPin=document.getElementById('plannerPinConfirm').value.trim();
+  const errors=[];
+  if(!/^\d{4,8}$/.test(pin)) errors.push('Le PIN doit contenir 4 à 8 chiffres.');
+  if(pinDialogMode==='setup'&&pin!==confirmPin) errors.push('Les deux PIN ne correspondent pas.');
+  if(errors.length){showPinErrors(errors);return;}
+  const hashed=await hashPin(pin);
+  if(pinDialogMode==='unlock'&&hashed!==state.security.plannerPinHash){showPinErrors(['PIN incorrect.']);return;}
+  if(pinDialogMode==='setup'){
+    state.security.plannerPinHash=hashed;
+    logChange('Sécurité locale','Création du PIN Planificateur.');
+  }
+  plannerUnlocked=true;
+  try{sessionStorage.setItem('pharma_planner_unlocked','1');}catch(_){}
+  state.profile='planner';
+  safePersist();
+  closeDialog(document.getElementById('pinDialog'));
+  applyProfile();renderAll();showToast('Profil Planificateur déverrouillé.','ok');
+}
+function showPinErrors(errors){
+  const box=document.getElementById('pinError');
+  box.innerHTML=errors.map(error=>`• ${escapeHTML(error)}`).join('<br>');box.className='form-error show';
+}
+function lockPlanner(){
+  plannerUnlocked=false;
+  try{sessionStorage.removeItem('pharma_planner_unlocked');}catch(_){}
+  state.profile='manager';safePersist();applyProfile();renderAll();showToast('Profil Planificateur verrouillé.','ok');
+}
+function applyProfile(){
+  const select=document.getElementById('profileSelect');
+  if(select) select.value=state.profile;
+  document.querySelectorAll('.planner-only').forEach(element=>{element.hidden=!isPlanner();});
+  const lock=document.getElementById('lockPlannerBtn');
+  if(lock) lock.hidden=!isPlanner();
+}
+
+function setView(view){
+  currentView=view==='monthly'?'monthly':'realtime';
+  document.getElementById('realtimeView').hidden=currentView!=='realtime';
+  document.getElementById('monthlyView').hidden=currentView!=='monthly';
+  const realtimeTab=document.getElementById('realtimeTab');
+  const monthlyTab=document.getElementById('monthlyTab');
+  realtimeTab.classList.toggle('active',currentView==='realtime');
+  monthlyTab.classList.toggle('active',currentView==='monthly');
+  realtimeTab.setAttribute('aria-selected',String(currentView==='realtime'));
+  monthlyTab.setAttribute('aria-selected',String(currentView==='monthly'));
+  realtimeTab.tabIndex=currentView==='realtime'?0:-1;
+  monthlyTab.tabIndex=currentView==='monthly'?0:-1;
+  document.querySelector('.filter-date').hidden=currentView!=='realtime';
+  document.querySelector('.filter-month').hidden=currentView!=='monthly';
+  if(currentView==='monthly'&&document.getElementById('statusFilter').value==='idle') document.getElementById('statusFilter').value='all';
+  renderAll();
+}
+function handleTabKeydown(event){
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+  event.preventDefault();
+  const next=event.key==='ArrowLeft'||event.key==='Home'?'realtime':'monthly';
+  setView(next);
+  document.getElementById(next==='realtime'?'realtimeTab':'monthlyTab').focus();
+}
+function changeMonth(value){
+  if(!/^\d{4}-\d{2}$/.test(value)) return;
+  state.selectedMonth=value;
+  safePersist();renderAll();
+}
+function shiftMonth(delta){
+  const current=startOfMonthFromValue(state.selectedMonth);
+  current.setMonth(current.getMonth()+delta);
+  state.selectedMonth=monthValue(current);
+  document.getElementById('monthFilter').value=state.selectedMonth;
+  safePersist();renderAll();
+}
+
+function renderKPIs(){
+  const metrics=monthlyMetrics();
+  document.getElementById('kpiContext').textContent=`Indicateurs de ${fmtMonth(state.selectedMonth)}`;
+  document.getElementById('capacityContext').textContent=`Capacité : ${capacityDescription()} · ${Math.round(metrics.capacityHours)} h disponibles sur 4 locaux.`;
+  const realizedRate=metrics.planned?Math.round(metrics.complete/metrics.planned*100):0;
+  const cards=[
+    ['Taux d’occupation',`${metrics.occupancy}%`,`${Math.round(metrics.occupiedHours)} h planifiées`,metrics.occupancy>=75?'ok':metrics.occupancy>=45?'warn':''],
+    ['Respect planning',`${metrics.respect}%`,`${metrics.complete} activité(s) clôturée(s)`,metrics.complete===0?'':metrics.respect>=90?'ok':metrics.respect>=75?'warn':'bad'],
+    ['Retards / blocages',metrics.delayed,`sur ${metrics.planned} activité(s)`,metrics.delayed===0?'ok':metrics.delayed<=2?'warn':'bad'],
+    ['Avancement moyen',`${metrics.avg}%`,'activités du mois',metrics.avg>=75?'ok':metrics.avg>=45?'warn':''],
+    ['Réalisées / planifiées',`${metrics.complete} / ${metrics.planned}`,`${realizedRate}% réalisées`,realizedRate>=80?'ok':realizedRate>=50?'warn':'']
+  ];
+  document.getElementById('kpis').innerHTML=cards.map(card=>`<div class="kpi ${card[3]}"><div class="label">${card[0]}</div><div class="value">${card[1]}</div><div class="sub">${card[2]}</div></div>`).join('');
+}
+
+function roomMatchesFilters(room,activity,reference){
+  const status=document.getElementById('statusFilter').value;
+  const team=document.getElementById('teamFilter').value;
+  const query=document.getElementById('searchFilter').value.toLowerCase().trim();
+  if(status==='idle'&&activity) return false;
+  if(status!=='idle'&&!activity&&status!=='all') return false;
+  if(activity){
+    if(team!=='all'&&activity.team!==team) return false;
+    const haystack=[room.name,activity.activity,activity.product,activity.batch,activity.team,activity.owner].join(' ').toLowerCase();
+    if(query&&!haystack.includes(query)) return false;
+    if(status==='active'&&!['running','paused'].includes(activity.status)) return false;
+    if(status==='planned'&&activity.status!=='planned') return false;
+    if(status==='late'&&!hasDelay(activity,reference)) return false;
+    if(status==='complete'&&activity.status!=='complete') return false;
+  }else if(query&&!room.name.toLowerCase().includes(query)) return false;
+  return true;
+}
+function actionButton(label,classes,handler,ariaLabel){
+  return `<button class="${classes}" onclick="${handler}" aria-label="${escapeHTML(ariaLabel)}">${label}</button>`;
+}
+function roomStateBadges(room,extraHtml=''){
+  const hygiene=room.hygiene==='a_nettoyer'?'a_nettoyer':'propre';
+  const occ=occupationOfRoom(room.id);
+  return `<div class="room-badges">
+    <span class="badge hygiene-${hygiene}" title="État d’hygiène saisi">${HYGIENE_LABELS[hygiene]}</span>
+    <span class="badge occ-${occ}" title="Occupation calculée — indicatif">${OCCUPATION_LABELS[occ]}</span>
+    ${extraHtml}
+  </div>`;
+}
+function renderRooms(){
+  const reference=getReferenceTime();
+  const cards=[];
+  state.rooms.forEach(room=>{
+    const activity=primaryActivity(room.id,reference);
+    if(!roomMatchesFilters(room,activity,reference)) return;
+    const visual=activityVisualState(activity,reference);
+    const next=nextActivity(room.id,reference,activity?.id);
+    const hygieneBtn=isPlanner()?actionButton(room.hygiene==='a_nettoyer'?'Marquer propre':'À nettoyer','btn-soft',`toggleRoomHygiene(${room.id})`,`Basculer l’hygiène de ${room.name}`):'';
+    if(!activity){
+      cards.push(`<div class="room status-idle">
+        <div class="room-head"><div class="room-title"><h3>${escapeHTML(room.name)}</h3><p>${escapeHTML(room.zone)}</p></div>${roomStateBadges(room)}</div>
+        <div class="activity-empty">Aucune activité planifiée à cette date</div>
+        <div class="note">Occupation <em>indicative</em> · hygiène saisie par le Planificateur.</div>
+        <div class="room-foot"><div class="delay ok">Local sans activité du jour</div><div class="mini-actions planner-only" ${isPlanner()?'':'hidden'}>${hygieneBtn}${actionButton('Planifier','btn-primary',`openCreateActivity(${room.id})`,`Planifier une activité dans ${room.name}`)}</div></div>
+      </div>`);
+      return;
+    }
+    const delayCategory=effectiveDelayCategory(activity,reference);
+    let actions=hygieneBtn+actionButton('Modifier','btn-soft',`openEditActivity('${activity.id}')`,`Modifier ${activity.activity} dans ${room.name}`);
+    if(activity.status==='planned') actions+=actionButton('Démarrer','btn-ok',`startActivity('${activity.id}')`,`Démarrer ${activity.activity}`);
+    if(['running','paused'].includes(activity.status)) actions+=actionButton('+10%','btn-soft',`advanceActivity('${activity.id}')`,`Augmenter l’avancement de ${activity.activity} de 10 pour cent`)+actionButton('Clôturer','btn-ok',`closeActivity('${activity.id}')`,`Clôturer ${activity.activity}`);
+    cards.push(`<div class="room status-${visual.cls}">
+      <div class="room-head"><div class="room-title"><h3>${escapeHTML(room.name)}</h3><p>${escapeHTML(room.zone)} · ${escapeHTML(activity.team)}</p></div>${roomStateBadges(room,`<span class="badge ${visual.cls}">${visual.label}</span>`)}</div>
+      <div class="activity-name">${escapeHTML(activity.activity)}</div>
+      <div class="meta">
+        <div><span>Produit / flux · lot</span><strong>${escapeHTML(activity.product)}<br>${escapeHTML(activity.batch)}</strong></div>
+        <div><span>Planning</span><strong>${fmtDateTime(activity.planStart)}<br>${fmtDateTime(activity.planEnd)}</strong></div>
+        <div><span>Étape actuelle</span><strong>${escapeHTML(activity.step||'—')}</strong></div>
+      </div>
+      <div class="progress-row"><span>Avancement</span><strong>${activity.progress}%</strong></div>
+      <div class="progress ${visual.cls}" role="progressbar" aria-label="Avancement de ${escapeHTML(activity.activity)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${activity.progress}"><div style="width:${clamp(activity.progress,0,100)}%"></div></div>
+      <div class="room-foot"><div class="delay ${visual.delayCls}">${visual.message}${delayCategory!=='none'?` · ${DELAY_LABELS[delayCategory]}`:''}</div>
+        <div class="mini-actions planner-only" ${isPlanner()?'':'hidden'}>${actions}</div>
+      </div>
+      ${activity.comment?`<div class="note"><strong>Note :</strong> ${escapeHTML(activity.comment)}</div>`:''}
+      ${next?`<div class="next-activity">Prochaine activité : <strong>${escapeHTML(next.activity)}</strong> — ${fmtDateTime(next.planStart)}</div>`:''}
+    </div>`);
+  });
+  document.getElementById('rooms').innerHTML=cards.join('')||'<div class="panel" style="grid-column:1/-1"><div class="empty-state">Aucun local ne correspond aux filtres.</div></div>';
+}
+function toggleRoomHygiene(roomId){
+  if(!isPlanner()) return;
+  const room=getRoom(roomId);if(!room) return;
+  room.hygiene=room.hygiene==='a_nettoyer'?'propre':'a_nettoyer';
+  room.updatedAt=new Date().toISOString();
+  logChange('Hygiène local',`${room.name} → ${HYGIENE_LABELS[room.hygiene]}`);
+  safePersist();renderAll();showToast(`${room.code||room.name} : ${HYGIENE_LABELS[room.hygiene]}.`,'ok');
+}
+
+function dailyPerformance(startDate,days){
+  const result=[];
+  for(let i=0;i<days;i++){
+    const date=addDays(startOfDay(startDate),i),end=endOfDay(date);
+    const completed=state.activities.filter(a=>a.status==='complete'&&a.actualEnd&&new Date(a.actualEnd)>=date&&new Date(a.actualEnd)<=end);
+    result.push({date,value:completed.length?Math.round(completed.filter(isOnTime).length/completed.length*100):null,count:completed.length});
+  }
+  return result;
+}
+function renderPlanningChart(){
+  const ref=getReferenceTime();
+  const start=addDays(startOfDay(ref),-6);
+  const values=dailyPerformance(start,7);
+  document.getElementById('planningChart').innerHTML=values.map(item=>{
+    const label=item.date.toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit'});
+    const height=item.value===null?5:Math.max(5,item.value);
+    return `<div class="bar-wrap"><div class="bar ${item.value===null?'no-data':''}" style="height:${height}%"><span>${item.value===null?'—':item.value+'%'}</span></div><div class="bar-label">${label}</div></div>`;
+  }).join('');
+}
+function renderTimeline(){
+  const events=state.activities.slice().sort((a,b)=>new Date(b.updatedAt||b.planStart)-new Date(a.updatedAt||a.planStart)).slice(0,7);
+  document.getElementById('timeline').innerHTML=events.length?events.map(a=>{
+    const room=getRoom(a.roomId);const visual=activityVisualState(a,new Date());
+    return `<div class="timeline-item"><div class="timeline-time">${fmtDateTime(a.updatedAt||a.planStart)}</div><div class="timeline-content ${visual.cls}"><strong>${escapeHTML(room?.name||'Local')} : ${escapeHTML(a.activity)}</strong><p>${visual.label} · ${a.progress}% · lot ${escapeHTML(a.batch)}</p></div></div>`;
+  }).join(''):'<div class="empty-state">Aucun événement disponible.</div>';
+}
+
+function calendarRange(month){
+  const first=startOfMonthFromValue(month),last=endOfMonthFromValue(month);
+  const mondayOffset=(first.getDay()+6)%7;
+  const start=addDays(first,-mondayOffset);
+  const sundayOffset=(7-last.getDay())%7;
+  const end=addDays(startOfDay(last),sundayOffset);
+  return {start,end};
+}
+function activityChipState(activity){
+  const visual=activityVisualState(activity,new Date());
+  return visual.cls==='idle'?'info':visual.cls;
+}
+function openCalendarActivity(id){ if(isPlanner()) openEditActivity(id); else openActivityDetails(id); }
+function renderMonthlyCalendar(){
+  const calendar=document.getElementById('monthlyCalendar');
+  document.getElementById('calendarTitle').textContent=`Calendrier — ${fmtMonth(state.selectedMonth)}`;
+  const {start,end}=calendarRange(state.selectedMonth);
+  const monthIndex=startOfMonthFromValue(state.selectedMonth).getMonth();
+  const filtered=filteredActivities(monthActivities());
+  let html=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(day=>`<div class="calendar-head">${day}</div>`).join('');
+  const todayKey=localDateValue(new Date());
+  for(let d=new Date(start);d<=end;d=addDays(d,1)){
+    const dayStart=startOfDay(d),dayEnd=endOfDay(d);
+    const dayActs=filtered.filter(a=>new Date(a.planStart)<=dayEnd&&new Date(a.planEnd)>=dayStart).sort((a,b)=>new Date(a.planStart)-new Date(b.planStart));
+    const outside=d.getMonth()!==monthIndex;
+    const shown=dayActs.slice(0,4);
+    const dateKey=localDateValue(d);
+    html+=`<div class="calendar-day ${outside?'outside':''} ${dateKey===todayKey?'today':''}"><div class="day-number">${d.getDate()}</div>`+
+      shown.map(a=>`<button type="button" class="activity-chip ${activityChipState(a)} clickable" onclick="openCalendarActivity('${a.id}')" aria-label="Voir ${escapeHTML(a.activity)}, local ${a.roomId}, ${fmtTime(a.planStart)}"><b>${fmtTime(a.planStart)} · L${a.roomId} · ${escapeHTML(a.activity)}</b><span>${escapeHTML(a.batch)} · ${a.progress}%</span></button>`).join('')+
+      (dayActs.length>4?`<button type="button" class="more-chip clickable" onclick="openDayDetails('${dateKey}')" aria-label="Voir les ${dayActs.length-4} autres activités du ${fmtDate(d)}">+ ${dayActs.length-4} autre(s)</button>`:'')+'</div>';
+  }
+  calendar.innerHTML=html;
+}
+function weeklyPerformance(month){
+  const start=startOfMonthFromValue(month),end=endOfMonthFromValue(month);const weeks=[];let cursor=new Date(start);let index=1;
+  while(cursor<=end){
+    const weekEnd=new Date(Math.min(endOfDay(addDays(cursor,6)).getTime(),end.getTime()));
+    const completed=state.activities.filter(a=>a.status==='complete'&&a.actualEnd&&new Date(a.actualEnd)>=cursor&&new Date(a.actualEnd)<=weekEnd);
+    weeks.push({label:`S${index}`,value:completed.length?Math.round(completed.filter(isOnTime).length/completed.length*100):null,count:completed.length});
+    cursor=addDays(cursor,7);index++;
+  }
+  return weeks;
+}
+function renderMonthlyPerformance(){
+  const values=weeklyPerformance(state.selectedMonth);
+  document.getElementById('monthlyPerformanceChart').innerHTML=values.map(item=>`<div class="bar-wrap"><div class="bar ${item.value===null?'no-data':''}" style="height:${item.value===null?5:Math.max(5,item.value)}%"><span>${item.value===null?'—':item.value+'%'}</span></div><div class="bar-label">${item.label}</div></div>`).join('');
+}
+function renderPareto(){
+  const counts={panne:0,attente_reglage:0,changement_format:0,nettoyage:0,uncategorized:0};
+  monthActivities().forEach(a=>{const category=effectiveDelayCategory(a,monthReference(state.selectedMonth));if(category!=='none') counts[category]=(counts[category]||0)+1;});
+  const rows=Object.entries(counts).filter(([,count])=>count>0).sort((a,b)=>b[1]-a[1]);
+  const max=rows[0]?.[1]||1;
+  document.getElementById('pareto').innerHTML=rows.length?rows.map(([category,count])=>`<div class="pareto-row"><strong>${DELAY_LABELS[category]}</strong><div class="pareto-track"><div class="pareto-fill" style="width:${count/max*100}%"></div></div><b>${count}</b></div>`).join(''):'<div class="empty-state">Aucun retard ou blocage catégorisé sur ce mois.</div>';
+}
+function renderLocalSummary(){
+  document.getElementById('localSummaryBody').innerHTML=state.rooms.map(room=>{
+    const metrics=monthlyMetrics(state.selectedMonth,room.id);
+    return `<tr><td><strong>${escapeHTML(room.name)}</strong></td><td>${metrics.planned}</td><td>${metrics.complete}</td><td>${metrics.avg}%</td><td>${metrics.occupancy}%</td><td>${metrics.delayed}</td></tr>`;
+  }).join('');
+}
+
+function statusLabel(activity,reference=new Date()){
+  if(activity.status==='cancelled') return 'Annulée';
+  if(activity.status==='complete') return isOnTime(activity)?'Terminée à l’heure':'Terminée en retard';
+  if(activity.status==='paused') return 'En pause';
+  if(isOverdue(activity,reference)) return 'En retard';
+  if(activity.status==='running') return 'En cours';
+  return 'Planifiée';
+}
+function statusColor(activity){
+  if(activity.status==='cancelled') return 'var(--muted)';
+  if(hasDelay(activity,monthReference(state.selectedMonth))) return 'var(--bad)';
+  if(activity.status==='complete') return 'var(--ok)';
+  if(activity.status==='paused') return 'var(--warn)';
+  return 'var(--info)';
+}
+function deltaText(activity){
+  if(activity.status!=='complete'||!activity.actualEnd) return '—';
+  const delta=minutesBetween(activity.actualEnd,activity.planEnd);
+  return `${delta>0?'+':''}${delta} min`;
+}
+function renderHistory(){
+  const monthList=filteredActivities(monthActivities()).sort((a,b)=>new Date(b.planStart)-new Date(a.planStart));
+  document.getElementById('historyCount').textContent=`${monthList.length} activité(s)`;
+  const actionHeader=document.querySelector('th.planner-only'); if(actionHeader) actionHeader.hidden=!isPlanner();
+  document.getElementById('historyBody').innerHTML=monthList.length?monthList.map(a=>{
+    const room=getRoom(a.roomId);const category=effectiveDelayCategory(a,monthReference(state.selectedMonth));
+    return `<tr><td>${fmtDate(a.planStart)}</td><td>${escapeHTML(room?.name||'—')}</td><td>${escapeHTML(a.activity)}</td><td>${escapeHTML(a.product)}<br><strong>${escapeHTML(a.batch)}</strong></td><td>${fmtTime(a.planStart)} → ${fmtTime(a.planEnd)}</td><td>${fmtDateTime(a.actualEnd)}</td><td>${deltaText(a)}</td><td>${DELAY_LABELS[category]}</td><td class="status-cell" style="color:${statusColor(a)}">${statusLabel(a,monthReference(state.selectedMonth))}</td><td class="planner-only" ${isPlanner()?'':'hidden'}><button class="btn-soft" style="padding:6px 8px;font-size:11px" onclick="openEditActivity('${a.id}')" aria-label="Ouvrir ${escapeHTML(a.activity)}">Ouvrir</button></td></tr>`;
+  }).join(''):`<tr><td colspan="10"><div class="empty-state">Aucune activité ne correspond aux filtres pour ${fmtMonth(state.selectedMonth)}.</div></td></tr>`;
+}
+function renderChangeLog(){
+  const logs=state.changeLog.slice().reverse().slice(0,30);
+  document.getElementById('journalCount').textContent=`${state.changeLog.length} entrée(s) conservée(s), maximum ${MAX_CHANGE_LOG}`;
+  document.getElementById('journalBody').innerHTML=logs.length?logs.map(log=>`<tr><td>${fmtDateTime(log.timestamp)}</td><td><strong>${escapeHTML(log.action)}</strong></td><td>${escapeHTML(log.detail)}</td></tr>`).join(''):'<tr><td colspan="3"><div class="empty-state">Aucune modification enregistrée.</div></td></tr>';
+}
+function renderAll(){
+  renderKPIs();
+  if(currentView==='realtime'){
+    renderRooms();renderPlanningChart();renderTimeline();
+  }else{
+    renderMonthlyCalendar();renderMonthlyPerformance();renderPareto();renderLocalSummary();
+  }
+  renderHistory();renderChangeLog();applyProfile();renderSavedStatus();
+}
+
+function fillRoomSelect(){
+  const rooms=activeRooms().length?activeRooms():state.rooms;
+  document.getElementById('fRoom').innerHTML=rooms.map(room=>`<option value="${room.id}">${escapeHTML(room.name)}</option>`).join('');
+}
+function fillProductSelect(preferred=''){
+  const room=getRoom(Number(document.getElementById('fRoom').value));
+  const type=document.getElementById('fActivityType').value;
+  const select=document.getElementById('fProductSelect');
+  const label=document.getElementById('fProductLabel');
+  const needsProduct=type==='Lot en cours';
+  label.hidden=!needsProduct;
+  select.disabled=!needsProduct;
+  if(!needsProduct){
+    select.innerHTML='<option value="—">—</option>';
+    document.getElementById('fProduct').value='—';
+    return;
+  }
+  let list=[];
+  if(PD()){
+    list=PD().articlesForRoomKind(getArticles(), room?.kind||'generique').map(a=>PD().productLabel(a));
+  }
+  if(!list.length) list=productOptionsForRoom(room);
+  if(preferred&&preferred!=='—'&&!list.includes(preferred)) list.unshift(preferred);
+  select.innerHTML=list.map(opt=>`<option value="${escapeHTML(opt)}">${escapeHTML(opt)}</option>`).join('');
+  if(preferred&&list.includes(preferred)) select.value=preferred;
+  else if(list[0]) select.value=list[0];
+  document.getElementById('fProduct').value=select.value||'—';
+  // Lot suggéré si vide
+  const batchEl=document.getElementById('fBatch');
+  if(batchEl&&!batchEl.value&&PD()){
+    const code=(select.value.match(/^([A-Z0-9]+)/)||[])[1];
+    if(code) batchEl.placeholder=PD().nextLotNumber(code,state.activities,getMovements());
+  }
+}
+function onActivityRoomChange(){ fillProductSelect(document.getElementById('fProductSelect')?.value||''); }
+function onActivityTypeChange(){ fillProductSelect(); }
+function onProductSelectChange(){
+  document.getElementById('fProduct').value=document.getElementById('fProductSelect').value||'—';
+}
+function defaultPlanTimes(){
+  const base=currentView==='monthly'?startOfMonthFromValue(state.selectedMonth):getReferenceTime();
+  const start=new Date(base);start.setHours(currentView==='monthly'?8:Math.min(20,Math.max(8,new Date().getHours()+1)),0,0,0);
+  if(localDateValue(start)!==localDateValue(base)) start.setDate(base.getDate());
+  return {start:localDateTimeValue(start),end:localDateTimeValue(addHours(start,2))};
+}
+function clearForm(roomId){
+  const times=defaultPlanTimes();
+  document.getElementById('fId').value='';
+  document.getElementById('fRoom').value=roomId||activeRooms()[0]?.id||state.rooms[0].id;
+  document.getElementById('fStatus').value='planned';
+  document.getElementById('fActivityType').value='Lot en cours';
+  document.getElementById('fActivity').value='';
+  document.getElementById('fBatch').value='';document.getElementById('fTeam').value='Équipe A';document.getElementById('fOwner').value='';
+  document.getElementById('fPlanStart').value=times.start;document.getElementById('fPlanEnd').value=times.end;document.getElementById('fActualStart').value='';document.getElementById('fActualEnd').value='';document.getElementById('fProgress').value=0;document.getElementById('fStep').value='';document.getElementById('fDelayCategory').value='none';document.getElementById('fComment').value='';
+  document.getElementById('formError').className='form-error';document.getElementById('deleteActivityBtn').hidden=true;
+  fillProductSelect();
+}
+function openCreateActivity(roomId=null){
+  if(!isPlanner()){showToast('Le profil Manager est en lecture seule.','bad');return;}
+  fillRoomSelect();clearForm(roomId);document.getElementById('dialogTitle').textContent='Nouvelle activité';openDialog(document.getElementById('activityDialog'),'#fActivityType');
+}
+function openEditActivity(id){
+  if(!isPlanner()){openActivityDetails(id);return;}
+  const a=getActivity(id);if(!a) return;
+  fillRoomSelect();
+  document.getElementById('dialogTitle').textContent='Modifier l’activité';
+  document.getElementById('fId').value=a.id;
+  document.getElementById('fRoom').value=a.roomId;
+  document.getElementById('fStatus').value=a.status;
+  document.getElementById('fActivityType').value=parseActivityType(a.activity);
+  document.getElementById('fActivity').value=a.activity;
+  document.getElementById('fBatch').value=a.batch==='—'?'':a.batch;
+  document.getElementById('fTeam').value=a.team;
+  document.getElementById('fOwner').value=a.owner==='—'?'':a.owner;
+  document.getElementById('fPlanStart').value=a.planStart;
+  document.getElementById('fPlanEnd').value=a.planEnd;
+  document.getElementById('fActualStart').value=a.actualStart||'';
+  document.getElementById('fActualEnd').value=a.actualEnd||'';
+  document.getElementById('fProgress').value=a.progress;
+  document.getElementById('fStep').value=a.step;
+  document.getElementById('fDelayCategory').value=a.delayCategory;
+  document.getElementById('fComment').value=a.comment;
+  document.getElementById('formError').className='form-error';
+  document.getElementById('deleteActivityBtn').hidden=false;
+  fillProductSelect(a.product==='—'?'':a.product);
+  openDialog(document.getElementById('activityDialog'),'#fActivityType');
+}
+function handleStatusChange(){
+  const status=document.getElementById('fStatus').value;
+  if(status==='complete'){
+    document.getElementById('fProgress').value=100;
+    if(!document.getElementById('fActualEnd').value) document.getElementById('fActualEnd').value=localDateTimeValue(new Date());
+    if(!document.getElementById('fActualStart').value) document.getElementById('fActualStart').value=document.getElementById('fPlanStart').value;
+  }
+  if(['running','paused'].includes(status)&&!document.getElementById('fActualStart').value) document.getElementById('fActualStart').value=localDateTimeValue(new Date());
+}
+function readForm(){
+  const type=document.getElementById('fActivityType').value;
+  const product=type==='Lot en cours'
+    ?(document.getElementById('fProductSelect').value||document.getElementById('fProduct').value||'—')
+    :'—';
+  document.getElementById('fProduct').value=product;
+  const activity=composeActivityLabel(type,product);
+  document.getElementById('fActivity').value=activity;
+  return {
+    id:document.getElementById('fId').value||uid(),roomId:Number(document.getElementById('fRoom').value),status:document.getElementById('fStatus').value,
+    activity,product:product||'—',batch:document.getElementById('fBatch').value.trim()||'—',team:document.getElementById('fTeam').value,owner:document.getElementById('fOwner').value.trim()||'—',
+    planStart:document.getElementById('fPlanStart').value,planEnd:document.getElementById('fPlanEnd').value,actualStart:document.getElementById('fActualStart').value,actualEnd:document.getElementById('fActualEnd').value,
+    progress:Number(document.getElementById('fProgress').value),step:document.getElementById('fStep').value.trim(),delayCategory:document.getElementById('fDelayCategory').value||'none',comment:document.getElementById('fComment').value.trim()
+  };
+}
+function validateActivity(activity){
+  const errors=[];
+  const start=new Date(activity.planStart),end=new Date(activity.planEnd);
+  if(!activity.activity) errors.push('Le nom de l’activité est obligatoire.');
+  if(!activity.planStart||!activity.planEnd||Number.isNaN(start.getTime())||Number.isNaN(end.getTime())) errors.push('Les dates planifiées sont obligatoires.');
+  else if(end<=start) errors.push('La date de fin planifiée doit être postérieure à la date de début.');
+  if(!Number.isFinite(activity.progress)||activity.progress<0||activity.progress>100) errors.push('L’avancement doit être compris entre 0 et 100 %.');
+  if(activity.actualStart&&activity.actualEnd&&new Date(activity.actualEnd)<=new Date(activity.actualStart)) errors.push('La fin réelle doit être postérieure au début réel.');
+  if(activity.status==='complete'&&!activity.actualEnd) errors.push('La fin réelle est obligatoire pour une activité terminée.');
+  if(activity.status==='complete'&&activity.progress!==100) errors.push('Une activité terminée doit avoir un avancement de 100 %.');
+  if((activity.status==='paused'||(activity.status==='complete'&&activity.actualEnd&&new Date(activity.actualEnd)>end))&&activity.delayCategory==='none') errors.push('Sélectionnez une catégorie de retard ou de blocage.');
+  if(!errors.length){
+    const overlap=state.activities.find(other=>other.id!==activity.id&&other.roomId===activity.roomId&&other.status!=='cancelled'&&new Date(activity.planStart)<new Date(other.planEnd)&&new Date(activity.planEnd)>new Date(other.planStart));
+    if(overlap) errors.push(`Chevauchement avec « ${overlap.activity} » (${fmtDateTime(overlap.planStart)} → ${fmtDateTime(overlap.planEnd)}).`);
+  }
+  return errors;
+}
+function showFormErrors(errors){
+  const box=document.getElementById('formError');
+  box.innerHTML=errors.map(error=>`• ${escapeHTML(error)}`).join('<br>');box.className='form-error show';
+}
+function saveActivity(event){
+  event.preventDefault();
+  if(!isPlanner()){closeDialog(document.getElementById('activityDialog'));return;}
+  const activity=readForm();
+  if(activity.status==='complete') activity.progress=100;
+  const errors=validateActivity(activity);
+  if(errors.length){showFormErrors(errors);return;}
+  const existing=getActivity(activity.id);const nowIso=new Date().toISOString();
+  if(existing){Object.assign(existing,activity,{updatedAt:nowIso});logChange('Activité modifiée',`${activity.activity} · ${getRoom(activity.roomId)?.name||'Local'} · lot ${activity.batch}.`);}
+  else{state.activities.push({...activity,createdAt:nowIso,updatedAt:nowIso});logChange('Activité créée',`${activity.activity} · ${getRoom(activity.roomId)?.name||'Local'} · lot ${activity.batch}.`);}
+  state.selectedMonth=monthValue(new Date(activity.planStart));
+  document.getElementById('monthFilter').value=state.selectedMonth;
+  if(safePersist()){closeDialog(document.getElementById('activityDialog'));renderAll();showToast(existing?'Activité mise à jour.':'Activité créée.','ok');}
+}
+function openConfirm({title,message,confirmText='Confirmer',danger=false,onConfirm}){
+  confirmAction=onConfirm;
+  document.getElementById('confirmTitle').textContent=title;
+  document.getElementById('confirmMessage').textContent=message;
+  const btn=document.getElementById('confirmActionBtn');
+  btn.textContent=confirmText;
+  btn.className=danger?'btn-danger':'btn-primary';
+  openDialog(document.getElementById('confirmDialog'),'#confirmCancelBtn');
+}
+function runConfirmAction(){
+  const action=confirmAction;confirmAction=null;
+  closeDialog(document.getElementById('confirmDialog'));
+  if(typeof action==='function') action();
+}
+function deleteCurrentActivity(){
+  if(!isPlanner()) return;
+  const id=document.getElementById('fId').value;if(!id) return;
+  const activity=getActivity(id);if(!activity) return;
+  closeDialog(document.getElementById('activityDialog'));
+  openConfirm({title:'Supprimer l’activité',message:`Supprimer « ${activity.activity} » du planning ? Cette action retire uniquement cette activité du navigateur.`,confirmText:'Supprimer',danger:true,onConfirm:()=>{
+    state.activities=state.activities.filter(a=>a.id!==id);logChange('Activité supprimée',`${activity.activity} · ${getRoom(activity.roomId)?.name||'Local'} · lot ${activity.batch}.`);safePersist();renderAll();showToast('Activité supprimée.','ok');
+  }});
+}
+function startActivity(id){
+  const activity=getActivity(id);if(!activity||!isPlanner()) return;
+  activity.status='running';activity.actualStart=activity.actualStart||localDateTimeValue(new Date());activity.updatedAt=new Date().toISOString();logChange('Activité démarrée',`${activity.activity} · ${getRoom(activity.roomId)?.name||'Local'}.`);safePersist();renderAll();showToast('Activité démarrée.','ok');
+}
+function advanceActivity(id){
+  const activity=getActivity(id);if(!activity||!isPlanner()) return;
+  activity.progress=clamp(activity.progress+10,0,100);activity.updatedAt=new Date().toISOString();logChange('Avancement mis à jour',`${activity.activity} : ${activity.progress} %.`);safePersist();renderAll();showToast(`Avancement porté à ${activity.progress} %.`,'ok');
+}
+function closeActivity(id){
+  const activity=getActivity(id);if(!activity||!isPlanner()) return;
+  const actualEnd=new Date();
+  if(actualEnd>new Date(activity.planEnd)&&activity.delayCategory==='none'){
+    openEditActivity(id);document.getElementById('fStatus').value='complete';document.getElementById('fProgress').value=100;document.getElementById('fActualEnd').value=localDateTimeValue(actualEnd);showFormErrors(['L’activité est en retard : sélectionnez une catégorie avant de la clôturer.']);return;
+  }
+  activity.status='complete';activity.progress=100;activity.actualStart=activity.actualStart||activity.planStart;activity.actualEnd=localDateTimeValue(actualEnd);
+  const room=getRoom(activity.roomId);
+  // D08 / D18 PF → magasin (libellé simple, pas de stock magasin)
+  if(room&&(room.kind==='cond_sec_continuite'||room.kind==='cond_sec_assemblage'||room.code==='D08'||room.code==='D18')){
+    activity.step='Clôturée · vers magasin';
+  }else{
+    activity.step='Clôturée';
+  }
+  activity.updatedAt=new Date().toISOString();
+  // Hygiène B : fin lot/maintenance → à nettoyer ; nettoyage → propre
+  if(room){
+    const t=parseActivityType(activity.activity);
+    if(t==='Nettoyage') room.hygiene='propre';
+    else room.hygiene='a_nettoyer';
+    room.updatedAt=new Date().toISOString();
+  }
+  logChange('Activité clôturée',`${activity.activity} · ${room?.name||'Local'} · ${isOnTime(activity)?'à l’heure':'en retard'}.`);
+  // Auto bascule stock A26 (fin amont process/géluleuse)
+  let handoffMsg='';
+  if(PD()){
+    const handoff=PD().storageHandoffFromComplete(activity,state.rooms);
+    if(handoff){
+      const already=state.activities.some(a=>a.comment&&a.comment.includes(activity.id)&&Number(a.roomId)===Number(handoff.roomId));
+      if(!already){
+        const start=new Date(actualEnd);
+        const end=addHours(start,2);
+        state.activities.push({
+          id:uid(),...handoff,
+          planStart:localDateTimeValue(start),planEnd:localDateTimeValue(end),
+          actualStart:'',actualEnd:'',
+          createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
+          comment:`${handoff.comment} · src:${activity.id}`
+        });
+        handoffMsg=' · stock A26 créé (à confirmer/corriger)';
+        logChange('Stock auto A26',`${handoff.product} · lot ${handoff.batch}`);
+      }
+    }
+  }
+  safePersist();renderAll();showToast(`Activité clôturée.${handoffMsg}`,'ok');
+}
+
+function activityDetailsHTML(a){
+  const room=getRoom(a.roomId);const category=effectiveDelayCategory(a,currentView==='monthly'?monthReference(state.selectedMonth):new Date());
+  return `<div class="detail-grid">
+    <div><span>Local</span><strong>${escapeHTML(room?.name||'—')}</strong></div><div><span>Statut</span><strong>${escapeHTML(statusLabel(a,new Date()))}</strong></div>
+    <div><span>Activité</span><strong>${escapeHTML(a.activity)}</strong></div><div><span>Produit / lot</span><strong>${escapeHTML(a.product)} · ${escapeHTML(a.batch)}</strong></div>
+    <div><span>Équipe</span><strong>${escapeHTML(a.team)}</strong></div><div><span>Responsable</span><strong>${escapeHTML(a.owner)}</strong></div>
+    <div><span>Planning</span><strong>${fmtDateTime(a.planStart)} → ${fmtDateTime(a.planEnd)}</strong></div><div><span>Réel</span><strong>${fmtDateTime(a.actualStart)} → ${fmtDateTime(a.actualEnd)}</strong></div>
+    <div><span>Avancement</span><strong>${a.progress} %</strong></div><div><span>Retard / blocage</span><strong>${DELAY_LABELS[category]}</strong></div>
+    <div class="full"><span>Étape</span><strong>${escapeHTML(a.step||'—')}</strong></div><div class="full"><span>Commentaire</span><strong>${escapeHTML(a.comment||'—')}</strong></div>
+  </div>`;
+}
+function openActivityDetails(id){
+  const a=getActivity(id);if(!a)return;
+  document.getElementById('detailTitle').textContent=a.activity;
+  document.getElementById('detailContent').innerHTML=activityDetailsHTML(a);
+  openDialog(document.getElementById('detailDialog'),'#closeDetailBtn');
+}
+function openDayDetails(dateKey){
+  const start=startOfDay(new Date(`${dateKey}T12:00:00`)),end=endOfDay(start);
+  const acts=filteredActivities(monthActivities()).filter(a=>new Date(a.planStart)<=end&&new Date(a.planEnd)>=start).sort((a,b)=>new Date(a.planStart)-new Date(b.planStart));
+  document.getElementById('dayDetailTitle').textContent=`Activités du ${fmtDate(start)}`;
+  document.getElementById('dayDetailContent').innerHTML=acts.length?acts.map(a=>`<button type="button" class="detail-list-item" onclick="closeDialog(document.getElementById('dayDetailDialog'));openCalendarActivity('${a.id}')"><strong>${fmtTime(a.planStart)} · ${escapeHTML(getRoom(a.roomId)?.name||'Local')}</strong><span>${escapeHTML(a.activity)} · lot ${escapeHTML(a.batch)} · ${a.progress} %</span></button>`).join(''):'<div class="empty-state">Aucune activité.</div>';
+  openDialog(document.getElementById('dayDetailDialog'),'#closeDayDetailBtn');
+}
+
+function openSettings(){
+  if(!isPlanner()){showToast('Les paramètres sont réservés au Planificateur.','bad');return;}
+  const s=state.settings;
+  document.getElementById('settingsHoursPerTeam').value=s.hoursPerTeam;
+  document.getElementById('settingsWeekdayTeams').value=s.weekdayTeams;
+  document.getElementById('settingsIncludeSaturday').checked=s.includeSaturday;
+  document.getElementById('settingsSaturdayTeams').value=s.saturdayTeams;
+  document.getElementById('settingsPin').value='';document.getElementById('settingsPinConfirm').value='';
+  document.getElementById('purgeBeforeMonth').value=monthValue(addDays(startOfMonthFromValue(state.selectedMonth),-365));
+  document.getElementById('timezoneInfo').textContent=`Les dates et heures utilisent le fuseau local du poste : ${timezoneLabel()}.`;
+  document.getElementById('settingsError').className='form-error';
+  toggleSaturdaySettings();renderStorageStatus();openDialog(document.getElementById('settingsDialog'),'#settingsHoursPerTeam');
+}
+function toggleSaturdaySettings(){
+  const enabled=document.getElementById('settingsIncludeSaturday')?.checked;
+  const input=document.getElementById('settingsSaturdayTeams');
+  if(input) input.disabled=!enabled;
+}
+async function saveSettings(event){
+  event.preventDefault();
+  if(!isPlanner()) return;
+  const hours=Number(document.getElementById('settingsHoursPerTeam').value);
+  const weekdayTeams=Number(document.getElementById('settingsWeekdayTeams').value);
+  const includeSaturday=document.getElementById('settingsIncludeSaturday').checked;
+  const saturdayTeams=Number(document.getElementById('settingsSaturdayTeams').value);
+  const pin=document.getElementById('settingsPin').value.trim();
+  const pinConfirm=document.getElementById('settingsPinConfirm').value.trim();
+  const errors=[];
+  if(!Number.isFinite(hours)||hours<1||hours>12) errors.push('La durée d’une équipe doit être comprise entre 1 et 12 heures.');
+  if(!Number.isInteger(weekdayTeams)||weekdayTeams<1||weekdayTeams>4) errors.push('Le nombre d’équipes en semaine doit être compris entre 1 et 4.');
+  if(includeSaturday&&(!Number.isInteger(saturdayTeams)||saturdayTeams<1||saturdayTeams>4)) errors.push('Le nombre d’équipes du samedi doit être compris entre 1 et 4.');
+  if(pin&&(!/^\d{4,8}$/.test(pin)||pin!==pinConfirm)) errors.push('Le nouveau PIN doit contenir 4 à 8 chiffres et être confirmé à l’identique.');
+  if(errors.length){const box=document.getElementById('settingsError');box.innerHTML=errors.map(e=>`• ${escapeHTML(e)}`).join('<br>');box.className='form-error show';return;}
+  state.settings={hoursPerTeam:hours,weekdayTeams,includeSaturday,saturdayTeams:includeSaturday?saturdayTeams:state.settings.saturdayTeams};
+  let pinChanged=false;
+  if(pin){state.security.plannerPinHash=await hashPin(pin);pinChanged=true;}
+  logChange('Paramètres modifiés',`${capacityDescription()}${pinChanged?' · PIN Planificateur modifié.':''}`);
+  safePersist();closeDialog(document.getElementById('settingsDialog'));renderAll();showToast('Paramètres enregistrés.','ok');
+}
+function requestPurge(){
+  if(!isPlanner()) return;
+  const cutoff=document.getElementById('purgeBeforeMonth').value;
+  if(!/^\d{4}-\d{2}$/.test(cutoff)){showToast('Sélectionnez un mois de coupure valide.','bad');return;}
+  const cutoffDate=startOfMonthFromValue(cutoff);
+  const count=state.activities.filter(a=>new Date(a.planEnd)<cutoffDate).length;
+  if(!count){showToast('Aucune activité antérieure à ce mois.','ok');return;}
+  closeDialog(document.getElementById('settingsDialog'));
+  openConfirm({title:'Purger les mois anciens',message:`${count} activité(s) antérieure(s) à ${fmtMonth(cutoff)} seront supprimées du navigateur. Exportez d’abord une sauvegarde JSON si vous souhaitez les archiver.`,confirmText:'Purger',danger:true,onConfirm:()=>{
+    state.activities=state.activities.filter(a=>new Date(a.planEnd)>=cutoffDate);
+    logChange('Archivage local',`${count} activité(s) antérieure(s) à ${fmtMonth(cutoff)} supprimée(s).`);
+    safePersist();renderAll();showToast(`${count} activité(s) ancienne(s) supprimée(s).`,'ok');
+  }});
+}
+
+function downloadBlob(content,type,filename){
+  const blob=content instanceof Blob?content:new Blob([content],{type});
+  const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),0);
+}
+function exportJSON(){
+  try{
+    const payload={application:'Dashboard 4 locaux d’activité',formatVersion:4,exportedAt:new Date().toISOString(),timezone:timezoneLabel(),data:state};
+    downloadBlob(JSON.stringify(payload,null,2),'application/json;charset=utf-8',`sauvegarde_dashboard_locaux_${localDateValue(new Date())}.json`);
+    showToast('Sauvegarde JSON exportée.','ok');
+  }catch(error){console.error(error);showToast('Export JSON impossible.','bad');}
+}
+function triggerImportJSON(){
+  if(!isPlanner()){showToast('La restauration est réservée au Planificateur.','bad');return;}
+  document.getElementById('jsonImportInput').click();
+}
+async function importJSONFile(input){
+  const file=input.files?.[0];input.value='';if(!file)return;
+  try{
+    const parsed=JSON.parse(await file.text());
+    const candidate=parsed.data||parsed.state||parsed;
+    if(!candidate||!Array.isArray(candidate.rooms)||!Array.isArray(candidate.activities)) throw new Error('Format invalide');
+    pendingImportState=normalizeState(candidate);
+    pendingImportState.profile='manager';
+    const activityCount=pendingImportState.activities.length;
+    openConfirm({title:'Restaurer la sauvegarde',message:`Remplacer les données actuelles par cette sauvegarde contenant ${activityCount} activité(s) ? Une exportation JSON préalable est recommandée.`,confirmText:'Restaurer',danger:true,onConfirm:applyImportedState});
+  }catch(error){console.error(error);showToast('Fichier JSON invalide ou incompatible.','bad');}
+}
+function applyImportedState(){
+  if(!pendingImportState)return;
+  state=pendingImportState;pendingImportState=null;plannerUnlocked=false;
+  try{sessionStorage.removeItem('pharma_planner_unlocked');}catch(_){}
+  logChange('Restauration JSON','Sauvegarde restaurée dans le navigateur.');
+  safePersist();
+  document.getElementById('monthFilter').value=state.selectedMonth;
+  applyProfile();renderAll();showToast('Sauvegarde restaurée. Profil Manager activé.','ok');
+}
+
+function csvEscape(value){ return `"${String(value??'').replaceAll('"','""')}"`; }
+function exportMonthlyCSV(){
+  const metrics=monthlyMetrics();
+  const rows=[
+    ['Rapport mensuel',fmtMonth(state.selectedMonth)],
+    ['Capacité',capacityDescription()],['Heures disponibles',Math.round(metrics.capacityHours)],['Taux d’occupation',`${metrics.occupancy}%`],['Respect planning',`${metrics.respect}%`],['Retards / blocages',metrics.delayed],['Avancement moyen',`${metrics.avg}%`],['Activités réalisées',metrics.complete],['Activités planifiées',metrics.planned],[],
+    ['Date','Local','Activité','Produit','Lot','Équipe','Début planifié','Fin planifiée','Début réel','Fin réelle','Avancement','Écart min','Cause','Statut']
+  ];
+  monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).forEach(a=>{
+    const room=getRoom(a.roomId);rows.push([fmtDate(a.planStart),room?.name||'',a.activity,a.product,a.batch,a.team,fmtDateTime(a.planStart),fmtDateTime(a.planEnd),fmtDateTime(a.actualStart),fmtDateTime(a.actualEnd),`${a.progress}%`,a.actualEnd?minutesBetween(a.actualEnd,a.planEnd):'',DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))],statusLabel(a,monthReference(state.selectedMonth))]);
+  });
+  const csv='\ufeff'+rows.map(row=>row.map(csvEscape).join(';')).join('\n');
+  try{downloadBlob(csv,'text/csv;charset=utf-8',`rapport_locaux_${state.selectedMonth}.csv`);showToast('Rapport CSV exporté.','ok');}
+  catch(error){console.error(error);showToast('Export CSV impossible.','bad');}
+}
+function buildPrintReport(){
+  const metrics=monthlyMetrics();
+  const rows=monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).map(a=>{const room=getRoom(a.roomId);return `<tr><td>${fmtDate(a.planStart)}</td><td>${escapeHTML(room?.name||'')}</td><td>${escapeHTML(a.activity)}</td><td>${escapeHTML(a.batch)}</td><td>${fmtTime(a.planStart)}–${fmtTime(a.planEnd)}</td><td>${a.progress}%</td><td>${DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))]}</td><td>${statusLabel(a,monthReference(state.selectedMonth))}</td></tr>`;}).join('');
+  document.getElementById('printReport').innerHTML=`<h1>Rapport mensuel — 4 locaux d’activité</h1><p>${fmtMonth(state.selectedMonth)}</p><p>Édité le ${new Date().toLocaleString('fr-FR')} · ${escapeHTML(timezoneLabel())}</p><p>Capacité : ${escapeHTML(capacityDescription())}</p><div class="print-kpis"><div class="print-kpi"><b>${metrics.occupancy}%</b><span>Occupation</span></div><div class="print-kpi"><b>${metrics.respect}%</b><span>Respect planning</span></div><div class="print-kpi"><b>${metrics.delayed}</b><span>Retards / blocages</span></div><div class="print-kpi"><b>${metrics.avg}%</b><span>Avancement moyen</span></div><div class="print-kpi"><b>${metrics.complete}/${metrics.planned}</b><span>Réalisées / planifiées</span></div></div><h2>Détail des activités</h2><table class="print-table"><thead><tr><th>Date</th><th>Local</th><th>Activité</th><th>Lot</th><th>Planning</th><th>Avancement</th><th>Cause</th><th>Statut</th></tr></thead><tbody>${rows||'<tr><td colspan="8">Aucune activité</td></tr>'}</tbody></table><p class="print-note">Calcul d’occupation basé sur la capacité paramétrée dans le dashboard.</p>`;
+}
+function exportMonthlyPDF(){ buildPrintReport();window.print(); }
+
+function userIsInteracting(){
+  if(document.querySelector('dialog[open]')) return true;
+  const active=document.activeElement;
+  return Boolean(active&&active.matches('input,select,textarea,[contenteditable="true"]'));
+}
+function autoRefresh(){
+  if(currentView!=='realtime') return;
+  if(userIsInteracting()){pendingAutoRefresh=true;return;}
+  pendingAutoRefresh=false;renderAll();
+}
+function tick(){
+  const clock=document.getElementById('clock');
+  if(clock) clock.textContent=new Date().toLocaleString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function initDialogs(){
+  document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('close',restoreFocus));
+  document.addEventListener('focusout',()=>{
+    if(pendingAutoRefresh) setTimeout(()=>{if(!userIsInteracting()){pendingAutoRefresh=false;renderAll();}},0);
+  });
+}
+function init(){
+  document.getElementById('dateFilter').value=localDateValue(new Date());
+  document.getElementById('monthFilter').value=state.selectedMonth;
+  document.getElementById('timezoneFooter').textContent=`Fuseau utilisé : ${timezoneLabel()} · les champs date/heure suivent l’heure locale du poste.`;
+  initDialogs();applyProfile();setView('realtime');tick();renderSavedStatus();
+  setInterval(tick,1000);
+  setInterval(autoRefresh,30000);
+}
+
+/* ===== Version 4 : Supabase hybride, locaux dynamiques et retard cumulé ===== */
+let syncContext={enabled:false,backendReachable:false,authenticated:false,user:null,role:null,syncing:false,pendingCount:0,blockedCount:0,lastSyncAt:''};
+let pendingRemoteSnapshot=null;
+
+const baseNormalizeState=normalizeState;
+normalizeState=function(value){
+  const normalized=baseNormalizeState(value||{});
+  normalized.version=4;
+  normalized.rooms=normalized.rooms.map(room=>({
+    ...room,
+    isActive:room.isActive!==false,
+    createdAt:room.createdAt||'',
+    updatedAt:room.updatedAt||''
+  }));
+  return normalized;
+};
+state=normalizeState(state);
+
+function activeRooms(){ return state.rooms.filter(room=>room.isActive!==false); }
+function roomsForMonthlySummary(){
+  const ids=new Set(monthActivities().map(activity=>Number(activity.roomId)));
+  return state.rooms.filter(room=>room.isActive!==false||ids.has(Number(room.id)));
+}
+function delayMinutes(activity){
+  if(activity.status!=='complete'||!activity.actualEnd||!activity.planEnd) return 0;
+  return Math.max(0,minutesBetween(activity.actualEnd,activity.planEnd));
+}
+function formatDuration(totalMinutes){
+  const minutes=Math.max(0,Math.round(Number(totalMinutes)||0));
+  if(minutes<60) return `${minutes} min`;
+  const hours=Math.floor(minutes/60),remaining=minutes%60;
+  return remaining?`${hours} h ${remaining} min`:`${hours} h`;
+}
+
+const localPersist=safePersist;
+safePersist=function(nextState=state,options={}){
+  const ok=localPersist(nextState);
+  if(ok&&!options.skipSync&&nextState===state) window.PharmaSync?.captureLocalState?.(state);
+  return ok;
+};
+
+const baseMonthlyMetrics=monthlyMetrics;
+monthlyMetrics=function(month=state.selectedMonth,roomId=null){
+  const metrics=baseMonthlyMetrics(month,roomId);
+  metrics.delayMinutes=monthActivities(month)
+    .filter(activity=>activity.status!=='cancelled'&&(roomId===null||Number(activity.roomId)===Number(roomId)))
+    .reduce((sum,activity)=>sum+delayMinutes(activity),0);
+  return metrics;
+};
+
+capacityHoursForMonth=function(month,roomCount=activeRooms().length){
+  const {weekdays,saturdays}=calendarDayCounts(month);
+  const settings=state.settings;
+  const weekdayCapacity=weekdays*settings.weekdayTeams*settings.hoursPerTeam;
+  const saturdayCapacity=settings.includeSaturday?saturdays*settings.saturdayTeams*settings.hoursPerTeam:0;
+  return (weekdayCapacity+saturdayCapacity)*roomCount;
+};
+
+renderKPIs=function(){
+  const metrics=monthlyMetrics();
+  document.getElementById('kpiContext').textContent=`Indicateurs de ${fmtMonth(state.selectedMonth)}`;
+  document.getElementById('capacityContext').textContent=`Capacité : ${capacityDescription()} · ${Math.round(metrics.capacityHours)} h disponibles sur ${activeRooms().length} local(aux) actif(s).`;
+  const realizedRate=metrics.planned?Math.round(metrics.complete/metrics.planned*100):0;
+  const cards=[
+    ['Taux d’occupation',`${metrics.occupancy}%`,`${Math.round(metrics.occupiedHours)} h planifiées`,metrics.occupancy>=75?'ok':metrics.occupancy>=45?'warn':''],
+    ['Respect planning',`${metrics.respect}%`,`${metrics.complete} activité(s) clôturée(s)`,metrics.complete===0?'':metrics.respect>=90?'ok':metrics.respect>=75?'warn':'bad'],
+    ['Retards / blocages',metrics.delayed,`sur ${metrics.planned} activité(s)`,metrics.delayed===0?'ok':metrics.delayed<=2?'warn':'bad'],
+    ['Retard cumulé',formatDuration(metrics.delayMinutes),'fin réelle − fin planifiée',metrics.delayMinutes===0?'ok':metrics.delayMinutes<=120?'warn':'bad'],
+    ['Avancement moyen',`${metrics.avg}%`,'activités du mois',metrics.avg>=75?'ok':metrics.avg>=45?'warn':''],
+    ['Réalisées / planifiées',`${metrics.complete} / ${metrics.planned}`,`${realizedRate}% réalisées`,realizedRate>=80?'ok':realizedRate>=50?'warn':'']
+  ];
+  document.getElementById('kpis').innerHTML=cards.map(card=>`<div class="kpi ${card[3]}"><div class="label">${card[0]}</div><div class="value">${card[1]}</div><div class="sub">${card[2]}</div></div>`).join('');
+};
+
+const baseRenderRooms=renderRooms;
+renderRooms=function(){
+  const allRooms=state.rooms;
+  state.rooms=activeRooms();
+  try{baseRenderRooms();}finally{state.rooms=allRooms;}
+};
+
+fillRoomSelect=function(){
+  const select=document.getElementById('fRoom');
+  const currentActivity=getActivity(document.getElementById('fId')?.value||'');
+  const rooms=state.rooms.filter(room=>room.isActive!==false||Number(room.id)===Number(currentActivity?.roomId));
+  select.innerHTML=rooms.map(room=>`<option value="${room.id}">${escapeHTML(room.name)}${room.isActive===false?' — inactif':''}</option>`).join('');
+};
+
+const baseClearForm=clearForm;
+clearForm=function(roomId){
+  const fallback=activeRooms()[0]?.id||state.rooms[0]?.id||'';
+  baseClearForm(roomId||fallback);
+};
+
+const baseOpenEditActivity=openEditActivity;
+openEditActivity=function(id){
+  baseOpenEditActivity(id);
+  const activity=getActivity(id);
+  if(!activity||!document.getElementById('activityDialog').open) return;
+  document.getElementById('fPlanStart').value=localDateTimeValue(activity.planStart);
+  document.getElementById('fPlanEnd').value=localDateTimeValue(activity.planEnd);
+  document.getElementById('fActualStart').value=activity.actualStart?localDateTimeValue(activity.actualStart):'';
+  document.getElementById('fActualEnd').value=activity.actualEnd?localDateTimeValue(activity.actualEnd):'';
+};
+
+function weeklyDelay(month){
+  const start=startOfMonthFromValue(month),end=endOfMonthFromValue(month),weeks=[];
+  let cursor=new Date(start),index=1;
+  while(cursor<=end){
+    const weekEnd=new Date(Math.min(endOfDay(addDays(cursor,6)).getTime(),end.getTime()));
+    const minutes=state.activities
+      .filter(activity=>activity.status==='complete'&&activity.actualEnd&&new Date(activity.planEnd)>=cursor&&new Date(activity.planEnd)<=weekEnd)
+      .reduce((sum,activity)=>sum+delayMinutes(activity),0);
+    weeks.push({label:`S${index}`,minutes});
+    cursor=addDays(cursor,7);index++;
+  }
+  return weeks;
+}
+function renderMonthlyDelay(){
+  const chart=document.getElementById('monthlyDelayChart');
+  if(!chart) return;
+  const values=weeklyDelay(state.selectedMonth),max=Math.max(1,...values.map(item=>item.minutes));
+  chart.innerHTML=values.map(item=>`<div class="bar-wrap"><div class="bar ${item.minutes===0?'no-data':''}" style="height:${item.minutes===0?5:Math.max(8,item.minutes/max*100)}%"><span>${item.minutes?formatDuration(item.minutes):'0 min'}</span></div><div class="bar-label">${item.label}</div></div>`).join('');
+}
+
+renderLocalSummary=function(){
+  document.getElementById('localSummaryBody').innerHTML=roomsForMonthlySummary().map(room=>{
+    const metrics=monthlyMetrics(state.selectedMonth,room.id);
+    return `<tr><td><strong>${escapeHTML(room.name)}</strong>${room.isActive===false?' <span class="badge idle">Inactif</span>':''}</td><td>${metrics.planned}</td><td>${metrics.complete}</td><td>${metrics.avg}%</td><td>${metrics.occupancy}%</td><td>${metrics.delayed}</td><td>${formatDuration(metrics.delayMinutes)}</td></tr>`;
+  }).join('');
+};
+
+const baseRenderAll=renderAll;
+renderAll=function(){
+  baseRenderAll();
+  if(currentView==='monthly') renderMonthlyDelay();
+  renderConnectionStatus();
+};
+
+function mergeChangeLogs(localLogs,serverLogs){
+  const map=new Map();
+  [...(localLogs||[]),...(serverLogs||[])].forEach(log=>map.set(log.id||`${log.timestamp}:${log.action}:${log.detail}`,log));
+  return [...map.values()].sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp)).slice(-MAX_CHANGE_LOG);
+}
+function applyServerSnapshot(snapshot){
+  if(!snapshot) return;
+  const preserved={selectedMonth:state.selectedMonth,security:state.security,profile:state.profile};
+  state=normalizeState({
+    ...state,
+    ...preserved,
+    rooms:Array.isArray(snapshot.rooms)?snapshot.rooms:state.rooms,
+    activities:Array.isArray(snapshot.activities)?snapshot.activities:state.activities,
+    settings:snapshot.settings||state.settings,
+    changeLog:mergeChangeLogs(state.changeLog,snapshot.changeLog)
+  });
+  safePersist(state,{skipSync:true});
+  document.getElementById('monthFilter').value=state.selectedMonth;
+  applyProfile();renderAll();
+}
+
+const baseRestoreFocus=restoreFocus;
+restoreFocus=function(){
+  baseRestoreFocus();
+  if(pendingRemoteSnapshot&&!userIsInteracting()){
+    const snapshot=pendingRemoteSnapshot;pendingRemoteSnapshot=null;
+    setTimeout(()=>applyServerSnapshot(snapshot),0);
+  }
+};
+
+const offlineIsPlanner=isPlanner;
+isPlanner=function(){
+  if(syncContext.authenticated) return syncContext.role==='planner';
+  return offlineIsPlanner();
+};
+
+const offlineProfileChange=requestProfileChange;
+requestProfileChange=function(profile){
+  if(syncContext.authenticated){
+    state.profile=syncContext.role==='planner'?'planner':'manager';
+    safePersist(state,{skipSync:true});applyProfile();renderAll();
+    if(profile==='planner'&&syncContext.role!=='planner') showToast('Le rôle est attribué dans Supabase : ce compte est Manager.','bad');
+    return;
+  }
+  if(profile==='planner'&&syncContext.enabled&&syncContext.backendReachable){
+    document.getElementById('profileSelect').value='manager';
+    openAuthDialog();showToast('Connectez-vous avec un compte Planificateur.','');
+    return;
+  }
+  offlineProfileChange(profile);
+};
+
+const baseApplyProfile=applyProfile;
+applyProfile=function(){
+  if(syncContext.authenticated) state.profile=syncContext.role==='planner'?'planner':'manager';
+  baseApplyProfile();
+  const select=document.getElementById('profileSelect');
+  if(select){
+    select.disabled=syncContext.authenticated;
+    select.title=syncContext.authenticated?'Rôle fourni par Supabase':'Profil local de repli';
+  }
+  const lock=document.getElementById('lockPlannerBtn');
+  if(lock&&syncContext.authenticated) lock.hidden=true;
+};
+
+function renderConnectionStatus(){
+  const element=document.getElementById('connectionStatus');
+  if(!element) return;
+  let cls='offline',text='Mode local';
+  if(syncContext.enabled){
+    if(syncContext.syncing){cls='online';text='Synchronisation…';}
+    else if(!syncContext.backendReachable){cls='offline';text=`Hors ligne${syncContext.pendingCount?` · ${syncContext.pendingCount} en attente`:''}`;}
+    else if(syncContext.authenticated){cls='online';text=`Supabase · ${syncContext.role==='planner'?'Planificateur':'Manager'}${syncContext.pendingCount?` · ${syncContext.pendingCount} en attente`:''}`;}
+    else{cls='error';text='Supabase · non connecté';}
+  }
+  if(syncContext.blockedCount) text+=` · ${syncContext.blockedCount} bloqué(s)`;
+  element.className=`connection-status ${cls}`;
+  element.innerHTML=`<span class="sync-dot"></span>${escapeHTML(text)}`;
+  const authOpen=document.getElementById('authOpenBtn'),logout=document.getElementById('logoutBtn');
+  if(authOpen) authOpen.hidden=syncContext.authenticated;
+  if(logout) logout.hidden=!syncContext.authenticated;
+  const syncButton=document.getElementById('syncNowBtn');
+  if(syncButton) syncButton.disabled=!syncContext.enabled||syncContext.syncing;
+  renderAuthSummary();
+}
+function renderAuthSummary(){
+  const summary=document.getElementById('authSummary'),info=document.getElementById('authSyncInfo');
+  if(summary){
+    summary.innerHTML=syncContext.authenticated
+      ?`<strong>${escapeHTML(syncContext.user?.email||syncContext.displayName||'Utilisateur connecté')}</strong><span class="hint">Rôle : ${syncContext.role==='planner'?'Planificateur':'Manager'} · ${syncContext.backendReachable?'serveur accessible':'mode hors-ligne'}</span>`
+      :`<strong>${syncContext.enabled?'Aucun utilisateur connecté':'Mode local'}</strong><span class="hint">${syncContext.enabled?'Connectez-vous par mot de passe ou magic link.':'Renseignez la configuration Supabase dans le fichier HTML.'}</span>`;
+  }
+  if(info) info.textContent=`File locale : ${syncContext.pendingCount||0} opération(s), dont ${syncContext.blockedCount||0} bloquée(s). Dernière synchronisation : ${syncContext.lastSyncAt?new Date(syncContext.lastSyncAt).toLocaleString('fr-FR'):'—'}.`;
+  const migrate=document.getElementById('migrateLocalBtn');if(migrate)migrate.disabled=!(syncContext.authenticated&&syncContext.role==='planner');
+  const retry=document.getElementById('retrySyncBtn');if(retry)retry.disabled=!syncContext.blockedCount;
+}
+
+function openAuthDialog(){
+  document.getElementById('authError').className='form-error';renderAuthSummary();
+  openDialog(document.getElementById('authDialog'),'#authEmail');
+}
+function showAuthError(message){const box=document.getElementById('authError');box.textContent=message;box.className='form-error show';}
+async function loginSupabase(event){
+  event.preventDefault();
+  try{
+    const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;
+    if(!email||!password) throw new Error('Saisissez l’adresse e-mail et le mot de passe.');
+    await window.PharmaSync.signInWithPassword(email,password);
+    closeDialog(document.getElementById('authDialog'));showToast('Connexion Supabase réussie.','ok');
+  }catch(error){showAuthError(error.message||'Connexion impossible.');}
+}
+async function sendMagicLinkSupabase(){
+  try{
+    const email=document.getElementById('authEmail').value.trim();if(!email)throw new Error('Saisissez une adresse e-mail.');
+    await window.PharmaSync.sendMagicLink(email);showToast('Magic link envoyé. Consultez votre messagerie.','ok');
+  }catch(error){showAuthError(error.message||'Envoi impossible.');}
+}
+async function logoutSupabase(){
+  try{await window.PharmaSync?.signOut();state.profile='manager';safePersist(state,{skipSync:true});applyProfile();renderAll();showToast('Déconnexion effectuée.','ok');}
+  catch(error){showToast(error.message||'Déconnexion impossible.','bad');}
+}
+async function requestSyncNow(){try{await window.PharmaSync?.syncNow();}catch(error){showToast(error.message||'Synchronisation impossible.','bad');}}
+async function migrateLocalToSupabase(){
+  openConfirm({title:'Migrer les données locales',message:'Envoyer les locaux, paramètres et activités présents dans ce navigateur vers Supabase ? Les contraintes serveur, notamment les chevauchements, resteront appliquées.',confirmText:'Migrer',onConfirm:async()=>{
+    try{const result=await window.PharmaSync.migrateLocalData();showToast(`Migration terminée : ${result.activities} activité(s).`,'ok');}
+    catch(error){showToast(error.message||'Migration incomplète.','bad');}
+  }});
+}
+function retrySyncQueue(){window.PharmaSync?.retryBlockedItems();showToast('Nouvelle tentative de synchronisation lancée.','ok');}
+
+function renderRoomAdminList(){
+  const container=document.getElementById('roomAdminList');
+  container.innerHTML=state.rooms.map(room=>`<div class="room-admin-row ${room.isActive===false?'inactive':''}">
+    <input id="roomName_${room.id}" value="${escapeHTML(room.name)}" aria-label="Nom du local ${room.id}" maxlength="120" />
+    <input id="roomZone_${room.id}" value="${escapeHTML(room.zone)}" aria-label="Zone du local ${room.id}" maxlength="120" />
+    <div class="mini-actions">
+      <button class="btn-soft" type="button" onclick="saveRoom(${room.id})">Enregistrer</button>
+      <button class="btn-soft" type="button" onclick="toggleRoomHygiene(${room.id})">${room.hygiene==='a_nettoyer'?'Propre':'À nettoyer'}</button>
+      <button class="${room.isActive===false?'btn-ok':'btn-warn'}" type="button" onclick="toggleRoom(${room.id})">${room.isActive===false?'Activer':'Désactiver'}</button>
+      <button class="btn-danger" type="button" onclick="requestDeleteRoom(${room.id})">Supprimer</button>
+    </div>
+  </div>`).join('')||'<div class="empty-state">Aucun local.</div>';
+}
+function openRoomsManager(){if(!isPlanner()){showToast('Action réservée au Planificateur.','bad');return;}renderRoomAdminList();openDialog(document.getElementById('roomsDialog'),'#newRoomName');}
+function addRoom(){
+  if(!isPlanner())return;
+  const name=document.getElementById('newRoomName').value.trim(),zone=document.getElementById('newRoomZone').value.trim()||'Zone de production';
+  if(!name){showToast('Le nom du local est obligatoire.','bad');return;}
+  const id=Math.max(0,...state.rooms.map(room=>Number(room.id)||0))+1,now=new Date().toISOString();
+  state.rooms.push(enrichRoom({id,name,zone,isActive:true,hygiene:'propre',createdAt:now,updatedAt:now}));
+  logChange('Local ajouté',name);safePersist();
+  document.getElementById('newRoomName').value='';renderRoomAdminList();renderAll();showToast('Local ajouté.','ok');
+}
+function saveRoom(id){
+  if(!isPlanner())return;const room=getRoom(id);if(!room)return;
+  const name=document.getElementById(`roomName_${id}`).value.trim(),zone=document.getElementById(`roomZone_${id}`).value.trim();
+  if(!name||!zone){showToast('Le nom et la zone sont obligatoires.','bad');return;}
+  room.name=name;room.zone=zone;
+  const codeMatch=name.match(/\b([AD]\d{2})\b/i);
+  if(codeMatch){room.code=codeMatch[1].toUpperCase();room.kind=roomKindFromCode(room.code);}
+  room.updatedAt=new Date().toISOString();logChange('Local modifié',name);safePersist();renderRoomAdminList();renderAll();showToast('Local mis à jour.','ok');
+}
+function toggleRoom(id){
+  if(!isPlanner())return;const room=getRoom(id);if(!room)return;
+  room.isActive=room.isActive===false;room.updatedAt=new Date().toISOString();logChange(room.isActive?'Local activé':'Local désactivé',room.name);safePersist();renderRoomAdminList();renderAll();showToast(room.isActive?'Local activé.':'Local désactivé.','ok');
+}
+function requestDeleteRoom(id){
+  if(!isPlanner())return;const room=getRoom(id);if(!room)return;
+  const count=state.activities.filter(activity=>Number(activity.roomId)===Number(id)).length;
+  if(count){showToast(`Ce local contient ${count} activité(s). Désactivez-le pour conserver l’historique.`,'bad');return;}
+  openConfirm({title:'Supprimer le local',message:`Supprimer « ${room.name} » ?`,confirmText:'Supprimer',danger:true,onConfirm:()=>{state.rooms=state.rooms.filter(item=>Number(item.id)!==Number(id));logChange('Local supprimé',room.name);safePersist();renderRoomAdminList();renderAll();showToast('Local supprimé.','ok');}});
+}
+
+/* ——— Stock A26 / Articles / CSV planning ——— */
+let csvPreviewRows=null;
+
+function openStockDialog(){
+  if(!canWriteStock()&&!isPlanner()){
+    // managers and planners can open; pure unknown profile blocked
+  }
+  if(!canWriteStock()){showToast('Connexion Manager ou Planificateur requise pour le stock A26.','bad');return;}
+  const arts=getArticles().filter(a=>a.active!==false&&(a.family==='MP'||a.family==='SF'||a.family==='pochette'));
+  const sel=document.getElementById('mArticle');
+  sel.innerHTML=arts.map(a=>`<option value="${escapeHTML(a.code)}">${escapeHTML(a.code)} · ${escapeHTML(a.label)}</option>`).join('');
+  if(arts[0]){
+    document.getElementById('mQty').value=arts[0].defaultQty;
+    document.getElementById('mUnit').value=arts[0].unit;
+    document.getElementById('mFuts').value=arts[0].defaultFuts||0;
+    if(PD()) document.getElementById('mBatch').placeholder=PD().nextLotNumber(arts[0].code,state.activities,getMovements());
+  }
+  sel.onchange=()=>{
+    const a=getArticle(sel.value);
+    if(!a) return;
+    document.getElementById('mQty').value=a.defaultQty;
+    document.getElementById('mUnit').value=a.unit;
+    document.getElementById('mFuts').value=a.defaultFuts||0;
+  };
+  renderStockTable();
+  openDialog(document.getElementById('stockDialog'),'#mSens');
+}
+function renderStockTable(){
+  const rows=getMovements().slice().sort((a,b)=>new Date(b.at)-new Date(a.at)).slice(0,80);
+  document.getElementById('stockBody').innerHTML=rows.length?rows.map(m=>{
+    const art=getArticle(m.articleCode);
+    return `<tr>
+      <td>${fmtDateTime(m.at)}</td>
+      <td><strong>${m.sens==='sortie'?'Sortie':'Entrée'}</strong></td>
+      <td>${escapeHTML(m.articleCode)}${art?` · ${escapeHTML(art.label)}`:''}</td>
+      <td>${escapeHTML(m.batch)}</td>
+      <td>${m.qty} ${escapeHTML(m.unit)}${m.futs?` · ${m.futs} fûts`:''}</td>
+      <td>${escapeHTML(m.place||'—')}</td>
+      <td>${escapeHTML(m.by||'—')}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="7">Aucun mouvement. Saisissez une entrée ou sortie théorique.</td></tr>';
+}
+function saveMovement(event){
+  event.preventDefault();
+  if(!canWriteStock()){showToast('Droit insuffisant.','bad');return;}
+  const articleCode=document.getElementById('mArticle').value;
+  let batch=document.getElementById('mBatch').value.trim();
+  if(!batch&&PD()) batch=PD().nextLotNumber(articleCode,state.activities,getMovements());
+  const mv={
+    id:uid('mv'),
+    sens:document.getElementById('mSens').value==='sortie'?'sortie':'entree',
+    articleCode,
+    batch:batch||'—',
+    qty:Number(document.getElementById('mQty').value)||0,
+    unit:document.getElementById('mUnit').value.trim()||'u',
+    futs:Number(document.getElementById('mFuts').value)||0,
+    place:document.getElementById('mPlace').value.trim(),
+    comment:document.getElementById('mComment').value.trim(),
+    at:new Date().toISOString(),
+    by:state.profile==='planner'?'Planificateur':'Manager'
+  };
+  if(mv.qty<=0){showToast('Quantité théorique requise.','bad');return;}
+  getMovements().push(mv);
+  logChange('Mouvement A26',`${mv.sens} ${mv.articleCode} lot ${mv.batch} qté ${mv.qty}`);
+  safePersist();
+  document.getElementById('mComment').value='';
+  document.getElementById('mBatch').value='';
+  renderStockTable();renderAll();
+  showToast(`Mouvement ${mv.sens} enregistré (${mv.qty} ${mv.unit}).`,'ok');
+}
+
+function openArticlesManager(){
+  if(!isPlanner()){showToast('Programmation articles réservée au Planificateur.','bad');return;}
+  renderArticlesTable();
+  openDialog(document.getElementById('articlesDialog'),'#artCode');
+}
+function renderArticlesTable(){
+  document.getElementById('articlesBody').innerHTML=getArticles().map(a=>`<tr class="${a.active===false?'inactive':''}">
+    <td><strong>${escapeHTML(a.code)}</strong></td>
+    <td>${escapeHTML(a.label)}</td>
+    <td>${escapeHTML(a.family)}</td>
+    <td>${a.defaultQty}</td>
+    <td>${escapeHTML(a.unit)}</td>
+    <td><button class="btn-soft" type="button" onclick="toggleArticle('${escapeHTML(a.code)}')">${a.active===false?'Activer':'Désactiver'}</button></td>
+  </tr>`).join('');
+}
+function saveArticleFromForm(){
+  if(!isPlanner()) return;
+  const code=document.getElementById('artCode').value.trim().toUpperCase();
+  if(!code){showToast('Code obligatoire.','bad');return;}
+  const raw={
+    code,
+    label:document.getElementById('artLabel').value.trim()||code,
+    family:document.getElementById('artFamily').value,
+    unit:document.getElementById('artUnit').value.trim()||'u',
+    defaultQty:Number(document.getElementById('artQty').value)||1,
+    defaultFuts:Number(document.getElementById('artFuts').value)||0,
+    active:true
+  };
+  const art=PD()?PD().normalizeArticle(raw,0):raw;
+  const idx=getArticles().findIndex(a=>a.code===art.code);
+  if(idx>=0) state.articles[idx]=art; else getArticles().push(art);
+  logChange('Article',`${art.code} · ${art.label}`);
+  safePersist();renderArticlesTable();
+  showToast(`Article ${art.code} enregistré.`,'ok');
+}
+function toggleArticle(code){
+  if(!isPlanner()) return;
+  const a=getArticle(code);if(!a) return;
+  a.active=a.active===false;
+  safePersist();renderArticlesTable();
+}
+
+function openCsvImport(){
+  if(!isPlanner()){showToast('Import réservé au Planificateur.','bad');return;}
+  csvPreviewRows=null;
+  document.getElementById('csvApplyBtn').disabled=true;
+  document.getElementById('csvPreviewBody').innerHTML='';
+  document.getElementById('csvPreviewMeta').textContent='Chargez un CSV ou téléchargez le modèle.';
+  openDialog(document.getElementById('csvDialog'));
+}
+function downloadCsvTemplate(){
+  if(!PD()) return;
+  const csv=PD().toCsv(PD().templateCsvRows(state.rooms));
+  downloadBlob(csv,'text/csv;charset=utf-8','modele_planning_locaux.csv');
+  showToast('Modèle CSV téléchargé (ouvrable dans Excel).','ok');
+}
+function previewCsvFile(event){
+  const file=event.target.files?.[0];
+  if(!file||!PD()) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const parsed=PD().parseCsv(String(reader.result||''));
+    csvPreviewRows=parsed.rows;
+    const body=document.getElementById('csvPreviewBody');
+    let insert=0,update=0,skip=0;
+    const lines=parsed.rows.map(row=>{
+      const room=state.rooms.find(r=>String(r.code).toUpperCase()===String(row.local_code||'').toUpperCase()
+        || String(r.name).toUpperCase().includes(String(row.local_code||'').toUpperCase()));
+      const status=(row.status||'planned').toLowerCase();
+      const batch=row.lot||'—';
+      const existing=state.activities.find(a=>Number(a.roomId)===(room?Number(room.id):-1)&&a.batch===batch&&a.status==='planned');
+      let action='ignorer';
+      if(!room||!row.plan_start||!row.plan_end){ action='erreur (local/dates)'; skip++; }
+      else if(status!=='planned'&&status!==''){ action='ignoré (seul planned importé)'; skip++; }
+      else if(existing){ action='MAJ planned'; update++; }
+      else { action='création'; insert++; }
+      return `<tr>
+        <td>${escapeHTML(row.local_code||'')}</td>
+        <td>${escapeHTML(row.type||'Lot en cours')}</td>
+        <td>${escapeHTML(row.article_code||'')}</td>
+        <td>${escapeHTML(batch)}</td>
+        <td>${escapeHTML(row.plan_start||'')}</td>
+        <td>${escapeHTML(row.plan_end||'')}</td>
+        <td>${action}</td>
+      </tr>`;
+    });
+    body.innerHTML=lines.join('')||'<tr><td colspan="7">Fichier vide</td></tr>';
+    document.getElementById('csvPreviewMeta').textContent=`Relecture : ${insert} création(s), ${update} MAJ, ${skip} ignorée(s). Vérifiez puis cliquez Appliquer.`;
+    document.getElementById('csvApplyBtn').disabled=!parsed.rows.length;
+  };
+  reader.readAsText(file,'UTF-8');
+  event.target.value='';
+}
+function applyCsvPreview(){
+  if(!isPlanner()||!csvPreviewRows||!PD()) return;
+  let n=0;
+  csvPreviewRows.forEach(row=>{
+    const room=state.rooms.find(r=>String(r.code).toUpperCase()===String(row.local_code||'').toUpperCase()
+      || String(r.name).toUpperCase().includes(String(row.local_code||'').toUpperCase()));
+    if(!room||!row.plan_start||!row.plan_end) return;
+    const status=(row.status||'planned').toLowerCase();
+    if(status&&status!=='planned') return;
+    const art=getArticle(row.article_code);
+    const product=art?PD().productLabel(art):(row.article_code||'—');
+    const type=row.type||'Lot en cours';
+    const activity=type.startsWith('Lot')||type==='Lot en cours'?composeActivityLabel('Lot en cours',product):type;
+    const batch=row.lot||(art&&PD()?PD().nextLotNumber(art.code,state.activities,getMovements()):'—');
+    const existing=state.activities.find(a=>Number(a.roomId)===Number(room.id)&&a.batch===batch&&a.status==='planned');
+    const payload={
+      roomId:room.id,activity,product,batch,
+      team:'Équipe A',owner:'—',
+      planStart:row.plan_start.length===16?row.plan_start:row.plan_start,
+      planEnd:row.plan_end,
+      actualStart:'',actualEnd:'',
+      progress:0,status:'planned',
+      step:row.step||'',comment:row.comment||`Import CSV · qté th. ${row.qty_theorique||''} ${row.unit||''}${row.futs?` · ${row.futs} fûts`:''}`,
+      delayCategory:'none',updatedAt:new Date().toISOString()
+    };
+    if(existing){
+      Object.assign(existing,payload);
+    }else{
+      state.activities.push({id:uid(),...payload,createdAt:new Date().toISOString()});
+    }
+    n++;
+  });
+  logChange('Import CSV',`${n} ligne(s) appliquée(s)`);
+  safePersist();renderAll();
+  csvPreviewRows=null;
+  document.getElementById('csvApplyBtn').disabled=true;
+  closeDialog(document.getElementById('csvDialog'));
+  showToast(`Planning appliqué : ${n} ligne(s).`,'ok');
+}
+
+window.PharmaDashboardAdapter={
+  getState:()=>JSON.parse(JSON.stringify(state)),
+  notify:(message,type)=>showToast(message,type),
+  setSyncContext:context=>{
+    syncContext={...syncContext,...context};
+    if(syncContext.authenticated){
+      state.profile=syncContext.role==='planner'?'planner':'manager';plannerUnlocked=false;
+      try{sessionStorage.removeItem('pharma_planner_unlocked');}catch(_){}
+      safePersist(state,{skipSync:true});
+    }
+    applyProfile();renderConnectionStatus();
+    if(!userIsInteracting()) renderAll();
+  },
+  applyRemoteSnapshot:snapshot=>{
+    if(userIsInteracting()){pendingRemoteSnapshot=snapshot;pendingAutoRefresh=true;return;}
+    applyServerSnapshot(snapshot);
+  }
+};
+
+const baseExportMonthlyCSV=exportMonthlyCSV;
+exportMonthlyCSV=function(){
+  const metrics=monthlyMetrics();
+  const rows=[
+    ['Rapport mensuel',fmtMonth(state.selectedMonth)],['Capacité',capacityDescription()],['Locaux actifs',activeRooms().length],['Heures disponibles',Math.round(metrics.capacityHours)],['Taux d’occupation',`${metrics.occupancy}%`],['Respect planning',`${metrics.respect}%`],['Retards / blocages',metrics.delayed],['Retard cumulé',formatDuration(metrics.delayMinutes)],['Avancement moyen',`${metrics.avg}%`],['Activités réalisées',metrics.complete],['Activités planifiées',metrics.planned],[],
+    ['Date','Local','Activité','Produit','Lot','Équipe','Début planifié','Fin planifiée','Début réel','Fin réelle','Avancement','Retard cumulé','Cause','Statut']
+  ];
+  monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).forEach(a=>{const room=getRoom(a.roomId);rows.push([fmtDate(a.planStart),room?.name||'',a.activity,a.product,a.batch,a.team,fmtDateTime(a.planStart),fmtDateTime(a.planEnd),fmtDateTime(a.actualStart),fmtDateTime(a.actualEnd),`${a.progress}%`,formatDuration(delayMinutes(a)),DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))],statusLabel(a,monthReference(state.selectedMonth))]);});
+  const csv='\ufeff'+rows.map(row=>row.map(csvEscape).join(';')).join('\n');
+  try{downloadBlob(csv,'text/csv;charset=utf-8',`rapport_locaux_${state.selectedMonth}.csv`);showToast('Rapport CSV exporté.','ok');}catch(error){console.error(error);showToast('Export CSV impossible.','bad');}
+};
+
+buildPrintReport=function(){
+  const metrics=monthlyMetrics();
+  const rows=monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).map(a=>{const room=getRoom(a.roomId);return `<tr><td>${fmtDate(a.planStart)}</td><td>${escapeHTML(room?.name||'')}</td><td>${escapeHTML(a.activity)}</td><td>${escapeHTML(a.batch)}</td><td>${fmtTime(a.planStart)}–${fmtTime(a.planEnd)}</td><td>${a.progress}%</td><td>${formatDuration(delayMinutes(a))}</td><td>${DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))]}</td><td>${statusLabel(a,monthReference(state.selectedMonth))}</td></tr>`;}).join('');
+  document.getElementById('printReport').innerHTML=`<h1>Rapport mensuel — locaux d’activité</h1><p>${fmtMonth(state.selectedMonth)}</p><p>Édité le ${new Date().toLocaleString('fr-FR')} · ${escapeHTML(timezoneLabel())}</p><p>Capacité : ${escapeHTML(capacityDescription())} · ${activeRooms().length} local(aux) actif(s)</p><div class="print-kpis"><div class="print-kpi"><b>${metrics.occupancy}%</b><span>Occupation</span></div><div class="print-kpi"><b>${metrics.respect}%</b><span>Respect planning</span></div><div class="print-kpi"><b>${metrics.delayed}</b><span>Retards / blocages</span></div><div class="print-kpi"><b>${formatDuration(metrics.delayMinutes)}</b><span>Retard cumulé</span></div><div class="print-kpi"><b>${metrics.avg}%</b><span>Avancement moyen</span></div><div class="print-kpi"><b>${metrics.complete}/${metrics.planned}</b><span>Réalisées / planifiées</span></div></div><h2>Détail des activités</h2><table class="print-table"><thead><tr><th>Date</th><th>Local</th><th>Activité</th><th>Lot</th><th>Planning</th><th>Avancement</th><th>Retard</th><th>Cause</th><th>Statut</th></tr></thead><tbody>${rows||'<tr><td colspan="9">Aucune activité</td></tr>'}</tbody></table><p class="print-note">Calcul d’occupation basé sur la capacité paramétrée dans le dashboard.</p>`;
+};
+
+
+init();
+
+</script>
+<script>
+window.PHARMA_SUPABASE_CONFIG = window.PHARMA_SUPABASE_CONFIG || {
+  enabled: false,
+  url: 'https://YOUR_PROJECT.supabase.co',
+  publishableKey: 'YOUR_PUBLISHABLE_OR_ANON_KEY',
+  redirectTo: window.location.protocol.startsWith('http') ? window.location.href.split('#')[0] : '',
+  libraryUrl: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
+};
+</script>
+<script src="./supabase-client.js"></script>
+
+</body>
+</html>
