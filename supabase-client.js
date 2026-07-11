@@ -319,15 +319,20 @@
   }
 
   function queueMutation(entity, operation, record, id) {
-    const key = `${entity}:${id}`;
-    let queue = getOutbox().filter(item => item.key !== key);
+    const userId = runtime.session?.user?.id || null;
+    const key = `${entity}:${id}:${userId || 'unclaimed'}`;
+    let queue = getOutbox().filter(item => !(
+      item.entity === entity
+      && String(item.id) === String(id)
+      && (item.userId || null) === userId
+    ));
     queue.push({
       key,
       entity,
       operation,
       id: String(id),
       record: record ? clone(record) : null,
-      userId: runtime.session?.user?.id || null,
+      userId,
       queuedAt: new Date().toISOString(),
       attempts: 0,
       blocked: false,
@@ -448,8 +453,19 @@
   }
 
   function canPushItem(item) {
-    if (item.userId && item.userId !== runtime.session?.user?.id) return false;
+    if (!runtime.session?.user || item.userId !== runtime.session.user.id) return false;
     return runtime.profile?.role === 'planner' || (runtime.profile?.role === 'manager' && item.entity === 'stock_movement');
+  }
+
+  function claimUnownedItems() {
+    const userId = runtime.session?.user?.id;
+    const planner = runtime.profile?.role === 'planner';
+    if (!userId) return;
+    const claimed = getOutbox().map(item => {
+      if (item.userId != null || (!planner && item.entity !== 'stock_movement')) return item;
+      return { ...item, userId, key: `${item.entity}:${item.id}:${userId}` };
+    });
+    setOutbox([...new Map(claimed.map(item => [item.key, item])).values()]);
   }
 
   async function drainOutbox() {
@@ -516,8 +532,8 @@
   }
 
   function shouldPreserveLocalState(localState, meta) {
-    if (meta.hasInitialPull) return false;
     if (meta.migrationPending) return true;
+    if (meta.hasInitialPull) return false;
     const hasData = ['rooms', 'activities', 'articles', 'movements']
       .some(key => Array.isArray(localState?.[key]) && localState[key].length > 0);
     if (!hasData) return false;
@@ -535,7 +551,7 @@
     const localState = adapter()?.getState?.() || readJSON(CACHE_KEY, {});
     const meta = getMeta();
     if (!force && shouldPreserveLocalState(localState, meta)) {
-      setMeta({ hasInitialPull: false, migrationPending: true });
+      setMeta({ migrationPending: true });
       notify('Des données locales doivent être migrées avant la première lecture Supabase.', '');
       publishContext({ migrationSuggested: true });
       return false;
@@ -574,7 +590,7 @@
     }
     const localState = adapter()?.getState?.() || readJSON(CACHE_KEY, {});
     if (shouldPreserveLocalState(localState, getMeta())) {
-      setMeta({ hasInitialPull: false, migrationPending: true });
+      setMeta({ migrationPending: true });
       notify('Des données locales doivent être migrées avant la première synchronisation Supabase.', '');
       publishContext({ migrationSuggested: true });
       return false;
@@ -641,6 +657,7 @@
     try {
       runtime.profile = await loadProfile(session.user.id);
       runtime.backendReachable = true;
+      if (getOutbox().some(item => item.userId == null)) setMeta({ migrationPending: true });
       publishContext();
       await subscribeRealtime();
       await syncNow();
@@ -685,9 +702,11 @@
 
     const normalized = canonicalState(localState);
     const planner = runtime.profile.role === 'planner';
-    if (!planner && normalized.activities.length) {
+    const unownedPlannerItems = getOutbox().some(item => item.userId == null && item.entity !== 'stock_movement');
+    if (!planner && (unownedPlannerItems || (!getMeta().hasInitialPull && normalized.activities.length))) {
       throw new Error('Connectez un compte Planificateur pour migrer le planning local.');
     }
+    claimUnownedItems();
     if (planner) {
       normalized.rooms.forEach(record => queueMutation('room', 'upsert', record, record.id));
       queueMutation('settings', 'upsert', normalized.settings, 1);

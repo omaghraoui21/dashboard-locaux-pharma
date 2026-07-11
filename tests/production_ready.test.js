@@ -240,9 +240,51 @@ check('offline capture queues articles and stock movements', () => {
 });
 
 check('outbox mutations are scoped to their authenticated author', () => {
-  const src = read('supabase-client.js');
-  assert.ok(src.includes('userId: runtime.session?.user?.id || null'));
-  assert.ok(/item\.userId && item\.userId !== runtime\.session\?\.user\?\.id/.test(src));
+  const storage = {
+    _d: {}, getItem(k) { return this._d[k] ?? null; },
+    setItem(k, v) { this._d[k] = String(v); }, removeItem(k) { delete this._d[k]; }
+  };
+  const testWindow = {
+    PHARMA_SUPABASE_CONFIG: { enabled: false }, localStorage: storage,
+    PharmaDashboardAdapter: { getState: () => ({}), setSyncContext() {}, notify() {} },
+    addEventListener() {}, location: { protocol: 'https:', href: 'https://example.test/' }
+  };
+  const instrumented = clientSrc.replace(
+    '  window.PharmaSync = {',
+    `  window.OutboxScopeTest = {
+      setAuth(userId, role) {
+        runtime.session = userId ? { user: { id: userId } } : null;
+        runtime.profile = role ? { role } : null;
+      },
+      queueMutation, canPushItem, claimUnownedItems, getOutbox
+    };
+    window.PharmaSync = {`
+  );
+  vm.runInNewContext(instrumented, {
+    window: testWindow, document: { readyState: 'complete', addEventListener() {} },
+    localStorage: storage, location: testWindow.location, navigator: { onLine: true },
+    console: { log() {}, warn() {}, error() {} }, setTimeout, clearTimeout
+  });
+  const scope = testWindow.OutboxScopeTest;
+
+  scope.setAuth('user-a', 'planner');
+  scope.queueMutation('activity', 'upsert', { id: 'same' }, 'same');
+  const itemA = scope.getOutbox()[0];
+  scope.setAuth('user-b', 'planner');
+  assert.strictEqual(scope.canPushItem(itemA), false);
+  scope.queueMutation('activity', 'upsert', { id: 'same', comment: 'B' }, 'same');
+  assert.deepStrictEqual(Array.from(scope.getOutbox(), item => item.userId).sort(), ['user-a', 'user-b']);
+
+  scope.setAuth(null, null);
+  scope.queueMutation('stock_movement', 'upsert', { id: 'mv' }, 'mv');
+  const unclaimed = scope.getOutbox().find(item => item.id === 'mv');
+  scope.setAuth('user-b', 'manager');
+  assert.strictEqual(scope.canPushItem(unclaimed), false);
+  scope.claimUnownedItems();
+  const claimed = scope.getOutbox().find(item => item.id === 'mv');
+  assert.strictEqual(claimed.userId, 'user-b');
+  assert.strictEqual(scope.canPushItem(claimed), true);
+  assert.ok(!clientSrc.includes('hasInitialPull: false, migrationPending'));
 });
 
 check('schema is reproducible for locaux_dash and Realtime', () => {
