@@ -28,11 +28,11 @@
   const FAMILY_BY_KIND = {
     process: ['MP', 'SF'],
     geluleuse: ['SF'],
-    stock_primaire: ['MP', 'SF'],
+    stock_primaire: ['MP', 'MF', 'SF'],
     blistereuse: ['SF', 'pochette', 'PF'],
     cond_sec_continuite: ['PF'],
     cond_sec_assemblage: ['PF', 'pochette'],
-    generique: ['MP', 'SF', 'pochette', 'PF']
+    generique: ['MP', 'MF', 'SF', 'pochette', 'PF']
   };
 
   const CSV_HEADERS = [
@@ -48,7 +48,7 @@
     return {
       code: String(a.code || `ART${index + 1}`).trim().toUpperCase(),
       label: String(a.label || a.code || 'Article').trim(),
-      family: ['MP', 'SF', 'pochette', 'PF'].includes(a.family) ? a.family : 'SF',
+      family: ['MP', 'MF', 'SF', 'pochette', 'PF'].includes(a.family) ? a.family : 'SF',
       unit: String(a.unit || 'u').trim(),
       defaultQty: Number(a.defaultQty) > 0 ? Number(a.defaultQty) : 1,
       defaultFuts: Math.max(0, Math.round(Number(a.defaultFuts) || 0)),
@@ -57,6 +57,12 @@
   }
 
   function articlesForRoomKind(articles, kind) {
+    if (kind === 'cond_sec_continuite') {
+      return (articles || []).filter(a => a.active !== false && ['PF600', 'PF601', 'PF602', 'PF603'].includes(a.code));
+    }
+    if (kind === 'cond_sec_assemblage') {
+      return (articles || []).filter(a => a.active !== false && (['PF604', 'PF605'].includes(a.code) || a.family === 'pochette'));
+    }
     const families = FAMILY_BY_KIND[kind] || FAMILY_BY_KIND.generique;
     return (articles || []).filter(a => a.active !== false && families.includes(a.family));
   }
@@ -97,9 +103,11 @@
 
     const kind = room.kind || '';
     if (kind !== 'process' && kind !== 'geluleuse') return null;
+    if (activity.activity && !String(activity.activity).trim().startsWith('Lot en cours')) return null;
 
-    const product = activity.product || '—';
-    const batch = activity.batch || '—';
+    const product = String(activity.product || '').trim();
+    const batch = String(activity.batch || '').trim();
+    if (!product || product === '—' || !batch || batch === '—') return null;
     const label = kind === 'process'
       ? `Stock A26 · entrée (suite ${room.code || room.name}) · ${product}`
       : `Stock A26 · SF entrée (suite ${room.code || room.name}) · ${product}`;
@@ -123,6 +131,7 @@
   function parseCsv(text) {
     const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return { headers: [], rows: [] };
+    const delimiter = lines[0].includes(';') ? ';' : ',';
     const split = (line) => {
       const out = [];
       let cur = '';
@@ -132,7 +141,7 @@
         if (c === '"') {
           if (q && line[i + 1] === '"') { cur += '"'; i++; }
           else q = !q;
-        } else if ((c === ';' || c === ',') && !q) {
+        } else if (c === delimiter && !q) {
           out.push(cur.trim());
           cur = '';
         } else cur += c;
@@ -152,7 +161,8 @@
 
   function toCsv(rows) {
     const esc = (v) => {
-      const s = String(v ?? '');
+      const raw = String(v ?? '');
+      const s = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
       if (/[;"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
       return s;
     };

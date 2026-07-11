@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="referrer" content="no-referrer" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://rzxnowngjudicmwzjdjo.supabase.co wss://rzxnowngjudicmwzjdjo.supabase.co; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests" />
 <title>Dashboard des locaux d'activité — Pilotage production</title>
 <style>
   :root{
     --bg:#f3f6f8;
     --panel:#ffffff;
     --ink:#18323f;
-    --muted:#6f8089;
+    --muted:#586d78;
     --line:#dfe7eb;
     --ok:#1f9d73;
     --warn:#d9911b;
@@ -67,8 +69,8 @@
   .note{margin-top:10px;font-size:12px;color:var(--muted);background:#f8fafb;padding:9px;border-radius:9px}
   .next-activity{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted)}
   .next-activity strong{color:var(--ink)}
-  .lower{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.monthly-lower{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin-top:14px}
-  .panel{background:var(--panel);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}.panel h2{font-size:16px;margin:0 0 12px}.panel-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}.panel-head h2{margin:0}
+  .lower{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;min-width:0}.monthly-lower{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin-top:14px;min-width:0}
+  .panel{background:var(--panel);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);min-width:0}.panel h2{font-size:16px;margin:0 0 12px}.panel-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}.panel-head h2{margin:0}
   .chart{height:210px;display:flex;align-items:flex-end;gap:8px;padding:18px 6px 24px;border-bottom:1px solid var(--line);position:relative;overflow-x:auto}
   .bar-wrap{height:100%;min-width:42px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}.bar{width:70%;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#4aa0be,#2e6a84);position:relative;min-height:4px}.bar.no-data{background:#dfe7eb}
   .bar span{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;white-space:nowrap}.bar-label{font-size:11px;color:var(--muted);white-space:nowrap}
@@ -313,7 +315,7 @@
       </label>
       <label class="full">Commentaire<textarea id="fComment" rows="3" maxlength="500" placeholder="Motif du retard, blocage ou information utile..."></textarea></label>
     </div>
-    <div id="formError" class="form-error"></div>
+    <div id="formError" class="form-error" role="alert" aria-live="assertive"></div>
     <div class="modal-actions">
       <button class="btn-danger" id="deleteActivityBtn" type="button" onclick="deleteCurrentActivity()">Supprimer</button>
       <div class="modal-actions-right">
@@ -333,7 +335,7 @@
       <label class="full">PIN<input id="plannerPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" pattern="[0-9]{4,8}" required /></label>
       <label class="full" id="pinConfirmLabel">Confirmer le PIN<input id="plannerPinConfirm" type="password" inputmode="numeric" autocomplete="off" maxlength="8" pattern="[0-9]{4,8}" /></label>
     </div>
-    <div id="pinError" class="form-error"></div>
+    <div id="pinError" class="form-error" role="alert" aria-live="assertive"></div>
     <div class="modal-actions"><span></span><div class="modal-actions-right"><button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('pinDialog'))">Annuler</button><button class="btn-primary" type="submit">Déverrouiller</button></div></div>
   </form>
 </dialog>
@@ -368,7 +370,7 @@
       </div>
     </div>
     <p class="hint" id="timezoneInfo"></p>
-    <div id="settingsError" class="form-error"></div>
+    <div id="settingsError" class="form-error" role="alert" aria-live="assertive"></div>
     <div class="modal-actions"><span></span><div class="modal-actions-right"><button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('settingsDialog'))">Annuler</button><button class="btn-primary" type="submit">Enregistrer</button></div></div>
   </form>
 </dialog>
@@ -405,7 +407,7 @@
       <label class="full">Adresse e-mail<input id="authEmail" type="email" autocomplete="username" required placeholder="prenom.nom@entreprise.tn" /></label>
       <label class="full">Mot de passe<input id="authPassword" type="password" autocomplete="current-password" placeholder="Mot de passe Supabase" /></label>
     </div>
-    <div id="authError" class="form-error"></div>
+    <div id="authError" class="form-error" role="alert" aria-live="assertive"></div>
     <div class="settings-section">
       <h3>Synchronisation</h3>
       <p class="hint" id="authSyncInfo">Les données restent utilisables localement lorsque le serveur est indisponible.</p>
@@ -475,13 +477,14 @@
 <dialog id="articlesDialog" aria-labelledby="articlesTitle">
   <div class="modal" style="max-width:820px">
     <h2 id="articlesTitle">Articles (programmation superviseur)</h2>
-    <p class="hint">FSF / PF / pochettes / MP. Création et édition par le Planificateur.</p>
+    <p class="hint">FSF / PF / pochettes / MP / MF. Création et édition par le Planificateur.</p>
     <div class="form-grid">
       <label>Code<input id="artCode" maxlength="20" placeholder="FSF600" /></label>
       <label>Libellé<input id="artLabel" maxlength="120" /></label>
       <label>Famille
         <select id="artFamily">
           <option value="MP">MP</option>
+          <option value="MF">MF</option>
           <option value="SF">SF</option>
           <option value="pochette">Pochette</option>
           <option value="PF">PF</option>
@@ -510,7 +513,8 @@
     <p class="hint">Excel → Enregistrer sous CSV UTF-8 (séparateur ;). <strong>Étape de relecture obligatoire</strong> avant application. Seules les lignes <code>planned</code> nouvelles ou existantes encore planifiées sont mises à jour. Live / terminé protégés.</p>
     <div class="modal-actions" style="margin-bottom:10px">
       <button class="btn-soft" type="button" onclick="downloadCsvTemplate()">Télécharger modèle CSV</button>
-      <label class="btn-soft" style="cursor:pointer">Charger un CSV<input id="csvFile" type="file" accept=".csv,text/csv" hidden onchange="previewCsvFile(event)" /></label>
+      <button class="btn-soft" type="button" onclick="document.getElementById('csvFile').click()">Charger un CSV</button>
+      <input id="csvFile" type="file" accept=".csv,text/csv" hidden onchange="previewCsvFile(event)" />
       <button class="btn-primary" type="button" id="csvApplyBtn" disabled onclick="applyCsvPreview()">Appliquer le planning</button>
       <button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('csvDialog'))">Fermer</button>
     </div>
@@ -674,7 +678,6 @@ function monthValue(date){
 }
 function addHours(date,hours){ return new Date(new Date(date).getTime()+hours*3600000); }
 function addDays(date,days){ const d=new Date(date); d.setDate(d.getDate()+days); return d; }
-function dateAt(year,monthIndex,day,hour,minute=0){ return new Date(year,monthIndex,day,hour,minute,0,0); }
 function startOfDay(date){ const d=new Date(date); d.setHours(0,0,0,0); return d; }
 function endOfDay(date){ const d=new Date(date); d.setHours(23,59,59,999); return d; }
 function startOfMonthFromValue(value){ const [y,m]=String(value).split('-').map(Number); return new Date(y,m-1,1,0,0,0,0); }
@@ -686,6 +689,7 @@ function escapeHTML(value){
     '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'
   }[char]));
 }
+function inlineArg(value){ return encodeURIComponent(String(value??'')); }
 function fmtDate(value){
   if(!value) return '—';
   const d=new Date(value);
@@ -726,44 +730,19 @@ function defaultSettings(){
 }
 function buildSeedState(){
   const today=new Date();
-  const y=today.getFullYear(), m=today.getMonth();
-  const day=Math.max(3,Math.min(today.getDate(),25));
   const rooms=DEFAULT_PLANT_ROOMS.map((r,i)=>enrichRoom({...r,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},i));
-  const make=(roomId,offset,startHour,duration,status,activity,product,batch,progress,delayCategory='none',comment='',step='')=>{
-    const planStart=dateAt(y,m,day+offset,startHour,0);
-    const planEnd=addHours(planStart,duration);
-    let actualStart='',actualEnd='';
-    if(['running','paused','complete'].includes(status)) actualStart=localDateTimeValue(addHours(planStart,.15));
-    if(status==='complete') actualEnd=localDateTimeValue(addHours(planEnd,delayCategory==='none'?-0.15:0.75));
-    return {id:uid(),roomId,activity,product,batch,team:roomId%2?'Équipe A':'Équipe B',owner:'Responsable production',planStart:localDateTimeValue(planStart),planEnd:localDateTimeValue(planEnd),actualStart,actualEnd,progress,status,step:step||(status==='complete'?'Clôturée':status==='planned'?'À démarrer':'Étape opérationnelle'),comment,delayCategory,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-  };
-  // ids: 1 A23 process, 2 A27 géluleuse, 3 A26 stock, 4 A28 blister, 5 D08 étui, 6 D18 assemblage
-  const activities=[
-    make(1,0,8,4,'running','Lot en cours · Aerofor 12 µg','Aerofor 12 µg','AF12-260701',72,'none','Pesée + mélange en cours.','Mélange'),
-    make(2,0,7,4,'paused','Lot en cours · Aeronide 200 µg','Aeronide 200 µg','AN200-260699',58,'attente_reglage','Réglage dose géluleuse.','Remplissage'),
-    make(3,0,9,2,'running','Lot en cours · SF gélule remplie · Aerofor 12 µg','SF gélule remplie · Aerofor 12 µg','SF-AF12-01',40,'none','Stock SF gélules remplies.','Stockage SF'),
-    make(4,0,8,6,'running','Lot en cours · Aerofor 12 µg · Boîte de 30','Aerofor 12 µg · Boîte de 30','BL-AF12-30',45,'none','Mise sous blister.','Blister'),
-    make(5,0,10,4,'planned','Lot en cours · Aerofor 12 µg · Boîte de 30 (mise en étui)','Aerofor 12 µg · Boîte de 30 (mise en étui)','ET-AF12-30',0,'none','Continuité A28 → D08.','Mise en étui'),
-    make(6,0,13,3,'planned','Lot en cours · Combifor 12/200 µg (assemblage)','Combifor 12/200 µg (assemblage)','CF12200-01',0,'none','Assemblage pochettes Aerofor + Aeronide 200.','Assemblage'),
-    make(4,-1,8,5,'complete','Lot en cours · Aeronide 200 µg · Pochette pour Combifor 12/200','Aeronide 200 µg · Pochette pour Combifor 12/200','BL-AN200-P',100,'none','Pochettes pour D18.','Blister'),
-    make(1,-1,8,3,'complete','Nettoyage','—','—',100,'none','Fin de lot process.','Nettoyage'),
-    make(2,-2,7,4,'complete','Lot en cours · Aeronide 400 µg','Aeronide 400 µg','AN400-260697',100,'none','',''),
-    make(6,2,9,4,'planned','Lot en cours · Stock pochette Aerofor 12 · pour Combifor 12/400','Stock pochette Aerofor 12 · pour Combifor 12/400','STK-AF12-400',0,'none','Pochettes en attente d’assemblage.','Stock pochettes'),
-    make(5,3,8,4,'planned','Lot en cours · Aeronide 400 µg · Boîte de 60 (mise en étui)','Aeronide 400 µg · Boîte de 60 (mise en étui)','ET-AN400-60',0,'none','',''),
-    make(3,1,14,2,'planned','Intervention maintenance','—','—',0,'none','Contrôle pesée / stockage.','Maintenance')
-  ];
   const articles=(PD()?.DEFAULT_ARTICLES||[]).map((a,i)=>PD().normalizeArticle(a,i));
   return {
     version:3,
     profile:'manager',
     selectedMonth:monthValue(today),
     rooms,
-    activities,
+    activities:[],
     articles,
     movements:[],
     settings:defaultSettings(),
     security:{plannerPinHash:''},
-    changeLog:[{id:uid('log'),timestamp:new Date().toISOString(),action:'Initialisation',detail:'Seed usine A23/A27/A26/A28/D08/D18 + articles FSF/PF.'}],
+    changeLog:[{id:uid('log'),timestamp:new Date().toISOString(),action:'Initialisation',detail:'Parc A23/A27/A26/A28/D08/D18 et catalogue articles initialisés.'}],
     lastSavedAt:''
   };
 }
@@ -781,17 +760,20 @@ function normalizeState(value){
   const rooms=looksLikeLegacyDemoRooms(rawRooms)
     ? fallback.rooms.map((r,i)=>enrichRoom(r,i))
     : rawRooms.map((r,i)=>enrichRoom(r,i));
+  const rawActivities=Array.isArray(value.activities)?value.activities:[];
+  const demoBatches=['AF12-260701','AN200-260699','SF-AF12-01','BL-AF12-30','ET-AF12-30','CF12200-01','BL-AN200-P','AN400-260697','STK-AF12-400','ET-AN400-60'];
+  const activities=rawActivities.length===12&&demoBatches.every(batch=>rawActivities.some(activity=>activity.batch===batch))?[]:rawActivities;
   return {
     version:3,
     profile:value.profile==='planner'?'planner':'manager',
     selectedMonth:/^\d{4}-\d{2}$/.test(value.selectedMonth||'')?value.selectedMonth:monthValue(new Date()),
     rooms,
-    activities:Array.isArray(value.activities)?value.activities.map(a=>({
+    activities:activities.map(a=>({
       id:a.id||uid(),roomId:Number(a.roomId),activity:a.activity||'Activité',product:a.product||'—',batch:a.batch||'—',team:a.team||'Équipe A',owner:a.owner||'—',
       planStart:a.planStart||'',planEnd:a.planEnd||'',actualStart:a.actualStart||'',actualEnd:a.actualEnd||'',progress:clamp(Number(a.progress)||0,0,100),
       status:['planned','running','paused','complete','cancelled'].includes(a.status)?a.status:'planned',step:a.step||'',comment:a.comment||'',delayCategory:DELAY_LABELS[a.delayCategory]?a.delayCategory:'none',
       createdAt:a.createdAt||new Date().toISOString(),updatedAt:a.updatedAt||new Date().toISOString()
-    })):[],
+    })),
     articles:Array.isArray(value.articles)&&value.articles.length
       ? value.articles.map((a,i)=>PD()?PD().normalizeArticle(a,i):a)
       : (PD()?.DEFAULT_ARTICLES||[]).map((a,i)=>PD().normalizeArticle(a,i)),
@@ -1247,9 +1229,10 @@ function renderRooms(){
       return;
     }
     const delayCategory=effectiveDelayCategory(activity,reference);
-    let actions=hygieneBtn+actionButton('Modifier','btn-soft',`openEditActivity('${activity.id}')`,`Modifier ${activity.activity} dans ${room.name}`);
-    if(activity.status==='planned') actions+=actionButton('Démarrer','btn-ok',`startActivity('${activity.id}')`,`Démarrer ${activity.activity}`);
-    if(['running','paused'].includes(activity.status)) actions+=actionButton('+10%','btn-soft',`advanceActivity('${activity.id}')`,`Augmenter l’avancement de ${activity.activity} de 10 pour cent`)+actionButton('Clôturer','btn-ok',`closeActivity('${activity.id}')`,`Clôturer ${activity.activity}`);
+    const activityArg=inlineArg(activity.id);
+    let actions=hygieneBtn+actionButton('Modifier','btn-soft',`openEditActivity(decodeURIComponent('${activityArg}'))`,`Modifier ${activity.activity} dans ${room.name}`);
+    if(activity.status==='planned') actions+=actionButton('Démarrer','btn-ok',`startActivity(decodeURIComponent('${activityArg}'))`,`Démarrer ${activity.activity}`);
+    if(['running','paused'].includes(activity.status)) actions+=actionButton('+10%','btn-soft',`advanceActivity(decodeURIComponent('${activityArg}'))`,`Augmenter l’avancement de ${activity.activity} de 10 pour cent`)+actionButton('Clôturer','btn-ok',`closeActivity(decodeURIComponent('${activityArg}'))`,`Clôturer ${activity.activity}`);
     cards.push(`<div class="room status-${visual.cls}">
       <div class="room-head"><div class="room-title"><h3>${escapeHTML(room.name)}</h3><p>${escapeHTML(room.zone)} · ${escapeHTML(activity.team)}</p></div>${roomStateBadges(room,`<span class="badge ${visual.cls}">${visual.label}</span>`)}</div>
       <div class="activity-name">${escapeHTML(activity.activity)}</div>
@@ -1333,7 +1316,7 @@ function renderMonthlyCalendar(){
     const shown=dayActs.slice(0,4);
     const dateKey=localDateValue(d);
     html+=`<div class="calendar-day ${outside?'outside':''} ${dateKey===todayKey?'today':''}"><div class="day-number">${d.getDate()}</div>`+
-      shown.map(a=>`<button type="button" class="activity-chip ${activityChipState(a)} clickable" onclick="openCalendarActivity('${a.id}')" aria-label="Voir ${escapeHTML(a.activity)}, local ${a.roomId}, ${fmtTime(a.planStart)}"><b>${fmtTime(a.planStart)} · L${a.roomId} · ${escapeHTML(a.activity)}</b><span>${escapeHTML(a.batch)} · ${a.progress}%</span></button>`).join('')+
+      shown.map(a=>`<button type="button" class="activity-chip ${activityChipState(a)} clickable" onclick="openCalendarActivity(decodeURIComponent('${inlineArg(a.id)}'))" aria-label="Voir ${escapeHTML(a.activity)}, local ${a.roomId}, ${fmtTime(a.planStart)}"><b>${fmtTime(a.planStart)} · L${a.roomId} · ${escapeHTML(a.activity)}</b><span>${escapeHTML(a.batch)} · ${a.progress}%</span></button>`).join('')+
       (dayActs.length>4?`<button type="button" class="more-chip clickable" onclick="openDayDetails('${dateKey}')" aria-label="Voir les ${dayActs.length-4} autres activités du ${fmtDate(d)}">+ ${dayActs.length-4} autre(s)</button>`:'')+'</div>';
   }
   calendar.innerHTML=html;
@@ -1392,7 +1375,7 @@ function renderHistory(){
   const actionHeader=document.querySelector('th.planner-only'); if(actionHeader) actionHeader.hidden=!isPlanner();
   document.getElementById('historyBody').innerHTML=monthList.length?monthList.map(a=>{
     const room=getRoom(a.roomId);const category=effectiveDelayCategory(a,monthReference(state.selectedMonth));
-    return `<tr><td>${fmtDate(a.planStart)}</td><td>${escapeHTML(room?.name||'—')}</td><td>${escapeHTML(a.activity)}</td><td>${escapeHTML(a.product)}<br><strong>${escapeHTML(a.batch)}</strong></td><td>${fmtTime(a.planStart)} → ${fmtTime(a.planEnd)}</td><td>${fmtDateTime(a.actualEnd)}</td><td>${deltaText(a)}</td><td>${DELAY_LABELS[category]}</td><td class="status-cell" style="color:${statusColor(a)}">${statusLabel(a,monthReference(state.selectedMonth))}</td><td class="planner-only" ${isPlanner()?'':'hidden'}><button class="btn-soft" style="padding:6px 8px;font-size:11px" onclick="openEditActivity('${a.id}')" aria-label="Ouvrir ${escapeHTML(a.activity)}">Ouvrir</button></td></tr>`;
+    return `<tr><td>${fmtDate(a.planStart)}</td><td>${escapeHTML(room?.name||'—')}</td><td>${escapeHTML(a.activity)}</td><td>${escapeHTML(a.product)}<br><strong>${escapeHTML(a.batch)}</strong></td><td>${fmtTime(a.planStart)} → ${fmtTime(a.planEnd)}</td><td>${fmtDateTime(a.actualEnd)}</td><td>${deltaText(a)}</td><td>${DELAY_LABELS[category]}</td><td class="status-cell" style="color:${statusColor(a)}">${statusLabel(a,monthReference(state.selectedMonth))}</td><td class="planner-only" ${isPlanner()?'':'hidden'}><button class="btn-soft" style="padding:6px 8px;font-size:11px" onclick="openEditActivity(decodeURIComponent('${inlineArg(a.id)}'))" aria-label="Ouvrir ${escapeHTML(a.activity)}">Ouvrir</button></td></tr>`;
   }).join(''):`<tr><td colspan="10"><div class="empty-state">Aucune activité ne correspond aux filtres pour ${fmtMonth(state.selectedMonth)}.</div></td></tr>`;
 }
 function renderChangeLog(){
@@ -1619,15 +1602,22 @@ function closeActivity(id){
       if(!already){
         const start=new Date(actualEnd);
         const end=addHours(start,2);
-        state.activities.push({
+        const stockActivity={
           id:uid(),...handoff,
           planStart:localDateTimeValue(start),planEnd:localDateTimeValue(end),
           actualStart:'',actualEnd:'',
           createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
           comment:`${handoff.comment} · src:${activity.id}`
-        });
-        handoffMsg=' · stock A26 créé (à confirmer/corriger)';
-        logChange('Stock auto A26',`${handoff.product} · lot ${handoff.batch}`);
+        };
+        const stockErrors=validateActivity(stockActivity);
+        if(stockErrors.length){
+          handoffMsg=' · stock A26 non créé : créneau occupé';
+          logChange('Stock auto A26 non créé',stockErrors[0]);
+        }else{
+          state.activities.push(stockActivity);
+          handoffMsg=' · stock A26 créé (à confirmer/corriger)';
+          logChange('Stock auto A26',`${handoff.product} · lot ${handoff.batch}`);
+        }
       }
     }
   }
@@ -1655,7 +1645,7 @@ function openDayDetails(dateKey){
   const start=startOfDay(new Date(`${dateKey}T12:00:00`)),end=endOfDay(start);
   const acts=filteredActivities(monthActivities()).filter(a=>new Date(a.planStart)<=end&&new Date(a.planEnd)>=start).sort((a,b)=>new Date(a.planStart)-new Date(b.planStart));
   document.getElementById('dayDetailTitle').textContent=`Activités du ${fmtDate(start)}`;
-  document.getElementById('dayDetailContent').innerHTML=acts.length?acts.map(a=>`<button type="button" class="detail-list-item" onclick="closeDialog(document.getElementById('dayDetailDialog'));openCalendarActivity('${a.id}')"><strong>${fmtTime(a.planStart)} · ${escapeHTML(getRoom(a.roomId)?.name||'Local')}</strong><span>${escapeHTML(a.activity)} · lot ${escapeHTML(a.batch)} · ${a.progress} %</span></button>`).join(''):'<div class="empty-state">Aucune activité.</div>';
+  document.getElementById('dayDetailContent').innerHTML=acts.length?acts.map(a=>`<button type="button" class="detail-list-item" onclick="closeDialog(document.getElementById('dayDetailDialog'));openCalendarActivity(decodeURIComponent('${inlineArg(a.id)}'))"><strong>${fmtTime(a.planStart)} · ${escapeHTML(getRoom(a.roomId)?.name||'Local')}</strong><span>${escapeHTML(a.activity)} · lot ${escapeHTML(a.batch)} · ${a.progress} %</span></button>`).join(''):'<div class="empty-state">Aucune activité.</div>';
   openDialog(document.getElementById('dayDetailDialog'),'#closeDayDetailBtn');
 }
 
@@ -1750,25 +1740,24 @@ function applyImportedState(){
   applyProfile();renderAll();showToast('Sauvegarde restaurée. Profil Manager activé.','ok');
 }
 
-function csvEscape(value){ return `"${String(value??'').replaceAll('"','""')}"`; }
+function csvEscape(value){
+  const raw=String(value??''),safe=/^\s*[=+\-@]/.test(raw)?`'${raw}`:raw;
+  return `"${safe.replaceAll('"','""')}"`;
+}
 function exportMonthlyCSV(){
   const metrics=monthlyMetrics();
   const rows=[
-    ['Rapport mensuel',fmtMonth(state.selectedMonth)],
-    ['Capacité',capacityDescription()],['Heures disponibles',Math.round(metrics.capacityHours)],['Taux d’occupation',`${metrics.occupancy}%`],['Respect planning',`${metrics.respect}%`],['Retards / blocages',metrics.delayed],['Avancement moyen',`${metrics.avg}%`],['Activités réalisées',metrics.complete],['Activités planifiées',metrics.planned],[],
-    ['Date','Local','Activité','Produit','Lot','Équipe','Début planifié','Fin planifiée','Début réel','Fin réelle','Avancement','Écart min','Cause','Statut']
+    ['Rapport mensuel',fmtMonth(state.selectedMonth)],['Capacité',capacityDescription()],['Locaux actifs',activeRooms().length],['Heures disponibles',Math.round(metrics.capacityHours)],['Taux d’occupation',`${metrics.occupancy}%`],['Respect planning',`${metrics.respect}%`],['Retards / blocages',metrics.delayed],['Retard cumulé',formatDuration(metrics.delayMinutes)],['Avancement moyen',`${metrics.avg}%`],['Activités réalisées',metrics.complete],['Activités planifiées',metrics.planned],[],
+    ['Date','Local','Activité','Produit','Lot','Équipe','Début planifié','Fin planifiée','Début réel','Fin réelle','Avancement','Retard cumulé','Cause','Statut']
   ];
-  monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).forEach(a=>{
-    const room=getRoom(a.roomId);rows.push([fmtDate(a.planStart),room?.name||'',a.activity,a.product,a.batch,a.team,fmtDateTime(a.planStart),fmtDateTime(a.planEnd),fmtDateTime(a.actualStart),fmtDateTime(a.actualEnd),`${a.progress}%`,a.actualEnd?minutesBetween(a.actualEnd,a.planEnd):'',DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))],statusLabel(a,monthReference(state.selectedMonth))]);
-  });
+  monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).forEach(a=>{const room=getRoom(a.roomId);rows.push([fmtDate(a.planStart),room?.name||'',a.activity,a.product,a.batch,a.team,fmtDateTime(a.planStart),fmtDateTime(a.planEnd),fmtDateTime(a.actualStart),fmtDateTime(a.actualEnd),`${a.progress}%`,formatDuration(delayMinutes(a)),DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))],statusLabel(a,monthReference(state.selectedMonth))]);});
   const csv='\ufeff'+rows.map(row=>row.map(csvEscape).join(';')).join('\n');
-  try{downloadBlob(csv,'text/csv;charset=utf-8',`rapport_locaux_${state.selectedMonth}.csv`);showToast('Rapport CSV exporté.','ok');}
-  catch(error){console.error(error);showToast('Export CSV impossible.','bad');}
+  try{downloadBlob(csv,'text/csv;charset=utf-8',`rapport_locaux_${state.selectedMonth}.csv`);showToast('Rapport CSV exporté.','ok');}catch(error){console.error(error);showToast('Export CSV impossible.','bad');}
 }
 function buildPrintReport(){
   const metrics=monthlyMetrics();
-  const rows=monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).map(a=>{const room=getRoom(a.roomId);return `<tr><td>${fmtDate(a.planStart)}</td><td>${escapeHTML(room?.name||'')}</td><td>${escapeHTML(a.activity)}</td><td>${escapeHTML(a.batch)}</td><td>${fmtTime(a.planStart)}–${fmtTime(a.planEnd)}</td><td>${a.progress}%</td><td>${DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))]}</td><td>${statusLabel(a,monthReference(state.selectedMonth))}</td></tr>`;}).join('');
-  document.getElementById('printReport').innerHTML=`<h1>Rapport mensuel — 4 locaux d’activité</h1><p>${fmtMonth(state.selectedMonth)}</p><p>Édité le ${new Date().toLocaleString('fr-FR')} · ${escapeHTML(timezoneLabel())}</p><p>Capacité : ${escapeHTML(capacityDescription())}</p><div class="print-kpis"><div class="print-kpi"><b>${metrics.occupancy}%</b><span>Occupation</span></div><div class="print-kpi"><b>${metrics.respect}%</b><span>Respect planning</span></div><div class="print-kpi"><b>${metrics.delayed}</b><span>Retards / blocages</span></div><div class="print-kpi"><b>${metrics.avg}%</b><span>Avancement moyen</span></div><div class="print-kpi"><b>${metrics.complete}/${metrics.planned}</b><span>Réalisées / planifiées</span></div></div><h2>Détail des activités</h2><table class="print-table"><thead><tr><th>Date</th><th>Local</th><th>Activité</th><th>Lot</th><th>Planning</th><th>Avancement</th><th>Cause</th><th>Statut</th></tr></thead><tbody>${rows||'<tr><td colspan="8">Aucune activité</td></tr>'}</tbody></table><p class="print-note">Calcul d’occupation basé sur la capacité paramétrée dans le dashboard.</p>`;
+  const rows=monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).map(a=>{const room=getRoom(a.roomId);return `<tr><td>${fmtDate(a.planStart)}</td><td>${escapeHTML(room?.name||'')}</td><td>${escapeHTML(a.activity)}</td><td>${escapeHTML(a.batch)}</td><td>${fmtTime(a.planStart)}–${fmtTime(a.planEnd)}</td><td>${a.progress}%</td><td>${formatDuration(delayMinutes(a))}</td><td>${DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))]}</td><td>${statusLabel(a,monthReference(state.selectedMonth))}</td></tr>`;}).join('');
+  document.getElementById('printReport').innerHTML=`<h1>Rapport mensuel — locaux d’activité</h1><p>${fmtMonth(state.selectedMonth)}</p><p>Édité le ${new Date().toLocaleString('fr-FR')} · ${escapeHTML(timezoneLabel())}</p><p>Capacité : ${escapeHTML(capacityDescription())} · ${activeRooms().length} local(aux) actif(s)</p><div class="print-kpis"><div class="print-kpi"><b>${metrics.occupancy}%</b><span>Occupation</span></div><div class="print-kpi"><b>${metrics.respect}%</b><span>Respect planning</span></div><div class="print-kpi"><b>${metrics.delayed}</b><span>Retards / blocages</span></div><div class="print-kpi"><b>${formatDuration(metrics.delayMinutes)}</b><span>Retard cumulé</span></div><div class="print-kpi"><b>${metrics.avg}%</b><span>Avancement moyen</span></div><div class="print-kpi"><b>${metrics.complete}/${metrics.planned}</b><span>Réalisées / planifiées</span></div></div><h2>Détail des activités</h2><table class="print-table"><thead><tr><th>Date</th><th>Local</th><th>Activité</th><th>Lot</th><th>Planning</th><th>Avancement</th><th>Retard</th><th>Cause</th><th>Statut</th></tr></thead><tbody>${rows||'<tr><td colspan="9">Aucune activité</td></tr>'}</tbody></table><p class="print-note">Calcul d’occupation basé sur la capacité paramétrée dans le dashboard.</p>`;
 }
 function exportMonthlyPDF(){ buildPrintReport();window.print(); }
 
@@ -1954,6 +1943,8 @@ function applyServerSnapshot(snapshot){
     ...preserved,
     rooms:Array.isArray(snapshot.rooms)?snapshot.rooms:state.rooms,
     activities:Array.isArray(snapshot.activities)?snapshot.activities:state.activities,
+    articles:Array.isArray(snapshot.articles)?snapshot.articles:state.articles,
+    movements:Array.isArray(snapshot.movements)?snapshot.movements:state.movements,
     settings:snapshot.settings||state.settings,
     changeLog:mergeChangeLogs(state.changeLog,snapshot.changeLog)
   });
@@ -2034,7 +2025,7 @@ function renderAuthSummary(){
       :`<strong>${syncContext.enabled?'Aucun utilisateur connecté':'Mode local'}</strong><span class="hint">${syncContext.enabled?'Connectez-vous par mot de passe ou magic link.':'Renseignez la configuration Supabase dans le fichier HTML.'}</span>`;
   }
   if(info) info.textContent=`File locale : ${syncContext.pendingCount||0} opération(s), dont ${syncContext.blockedCount||0} bloquée(s). Dernière synchronisation : ${syncContext.lastSyncAt?new Date(syncContext.lastSyncAt).toLocaleString('fr-FR'):'—'}.`;
-  const migrate=document.getElementById('migrateLocalBtn');if(migrate)migrate.disabled=!(syncContext.authenticated&&syncContext.role==='planner');
+  const migrate=document.getElementById('migrateLocalBtn');if(migrate)migrate.disabled=!syncContext.authenticated;
   const retry=document.getElementById('retrySyncBtn');if(retry)retry.disabled=!syncContext.blockedCount;
 }
 
@@ -2064,8 +2055,9 @@ async function logoutSupabase(){
 }
 async function requestSyncNow(){try{await window.PharmaSync?.syncNow();}catch(error){showToast(error.message||'Synchronisation impossible.','bad');}}
 async function migrateLocalToSupabase(){
-  openConfirm({title:'Migrer les données locales',message:'Envoyer les locaux, paramètres et activités présents dans ce navigateur vers Supabase ? Les contraintes serveur, notamment les chevauchements, resteront appliquées.',confirmText:'Migrer',onConfirm:async()=>{
-    try{const result=await window.PharmaSync.migrateLocalData();showToast(`Migration terminée : ${result.activities} activité(s).`,'ok');}
+  const scope=syncContext.role==='planner'?'le planning, les articles et le stock':'les mouvements de stock uniquement';
+  openConfirm({title:'Migrer les données locales',message:`Envoyer ${scope} présents dans ce navigateur vers Supabase ? Les contraintes serveur resteront appliquées.`,confirmText:'Migrer',onConfirm:async()=>{
+    try{const result=await window.PharmaSync.migrateLocalData();showToast(`Migration terminée : ${result.activities} activité(s), ${result.movements} mouvement(s).`,'ok');}
     catch(error){showToast(error.message||'Migration incomplète.','bad');}
   }});
 }
@@ -2118,11 +2110,8 @@ function requestDeleteRoom(id){
 let csvPreviewRows=null;
 
 function openStockDialog(){
-  if(!canWriteStock()&&!isPlanner()){
-    // managers and planners can open; pure unknown profile blocked
-  }
   if(!canWriteStock()){showToast('Connexion Manager ou Planificateur requise pour le stock A26.','bad');return;}
-  const arts=getArticles().filter(a=>a.active!==false&&(a.family==='MP'||a.family==='SF'||a.family==='pochette'));
+  const arts=getArticles().filter(a=>a.active!==false&&['MP','MF','SF','pochette'].includes(a.family));
   const sel=document.getElementById('mArticle');
   sel.innerHTML=arts.map(a=>`<option value="${escapeHTML(a.code)}">${escapeHTML(a.code)} · ${escapeHTML(a.label)}</option>`).join('');
   if(arts[0]){
@@ -2197,13 +2186,14 @@ function renderArticlesTable(){
     <td>${escapeHTML(a.family)}</td>
     <td>${a.defaultQty}</td>
     <td>${escapeHTML(a.unit)}</td>
-    <td><button class="btn-soft" type="button" onclick="toggleArticle('${escapeHTML(a.code)}')">${a.active===false?'Activer':'Désactiver'}</button></td>
+    <td><button class="btn-soft" type="button" onclick="toggleArticle(decodeURIComponent('${inlineArg(a.code)}'))">${a.active===false?'Activer':'Désactiver'}</button></td>
   </tr>`).join('');
 }
 function saveArticleFromForm(){
   if(!isPlanner()) return;
   const code=document.getElementById('artCode').value.trim().toUpperCase();
   if(!code){showToast('Code obligatoire.','bad');return;}
+  if(!/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(code)){showToast('Code invalide : lettres, chiffres, point, tiret ou underscore uniquement.','bad');return;}
   const raw={
     code,
     label:document.getElementById('artLabel').value.trim()||code,
@@ -2241,6 +2231,30 @@ function downloadCsvTemplate(){
   downloadBlob(csv,'text/csv;charset=utf-8','modele_planning_locaux.csv');
   showToast('Modèle CSV téléchargé (ouvrable dans Excel).','ok');
 }
+function prepareCsvRow(row,index=0){
+  const localCode=String(row.local_code||'').trim().toUpperCase();
+  const room=localCode?state.rooms.find(r=>String(r.code).toUpperCase()===localCode||String(r.name).toUpperCase().includes(localCode)):null;
+  const status=(row.status||'planned').toLowerCase();
+  const type=String(row.type||'Lot en cours').trim();
+  const art=getArticle(row.article_code);
+  const product=art?PD().productLabel(art):(row.article_code||'—');
+  const batch=row.lot||(art?PD().nextLotNumber(art.code,state.activities,getMovements()):'—');
+  const existing=room?state.activities.find(a=>Number(a.roomId)===Number(room.id)&&a.batch===batch&&a.status==='planned'):null;
+  const activity=type==='Lot en cours'?composeActivityLabel(type,product):type;
+  const payload={
+    id:existing?.id||`csv_preview_${index}`,roomId:Number(room?.id),activity,product,batch,
+    team:'Équipe A',owner:'—',planStart:row.plan_start||'',planEnd:row.plan_end||'',actualStart:'',actualEnd:'',
+    progress:0,status:'planned',step:row.step||'',comment:row.comment||`Import CSV · qté th. ${row.qty_theorique||''} ${row.unit||''}${row.futs?` · ${row.futs} fûts`:''}`,
+    delayCategory:'none'
+  };
+  const errors=[];
+  if(!room) errors.push('local inconnu');
+  if(status!=='planned') errors.push('seul le statut planned est accepté');
+  if(!ACTIVITY_TYPES.includes(type)) errors.push('type d’activité inconnu');
+  if(type==='Lot en cours'&&!art) errors.push('article inconnu');
+  if(!errors.length) errors.push(...validateActivity(payload));
+  return {room,batch,existing,payload,errors};
+}
 function previewCsvFile(event){
   const file=event.target.files?.[0];
   if(!file||!PD()) return;
@@ -2250,15 +2264,10 @@ function previewCsvFile(event){
     csvPreviewRows=parsed.rows;
     const body=document.getElementById('csvPreviewBody');
     let insert=0,update=0,skip=0;
-    const lines=parsed.rows.map(row=>{
-      const room=state.rooms.find(r=>String(r.code).toUpperCase()===String(row.local_code||'').toUpperCase()
-        || String(r.name).toUpperCase().includes(String(row.local_code||'').toUpperCase()));
-      const status=(row.status||'planned').toLowerCase();
-      const batch=row.lot||'—';
-      const existing=state.activities.find(a=>Number(a.roomId)===(room?Number(room.id):-1)&&a.batch===batch&&a.status==='planned');
+    const lines=parsed.rows.map((row,index)=>{
+      const {batch,existing,errors}=prepareCsvRow(row,index);
       let action='ignorer';
-      if(!room||!row.plan_start||!row.plan_end){ action='erreur (local/dates)'; skip++; }
-      else if(status!=='planned'&&status!==''){ action='ignoré (seul planned importé)'; skip++; }
+      if(errors.length){ action=`erreur : ${escapeHTML(errors[0])}`; skip++; }
       else if(existing){ action='MAJ planned'; update++; }
       else { action='création'; insert++; }
       return `<tr>
@@ -2273,49 +2282,31 @@ function previewCsvFile(event){
     });
     body.innerHTML=lines.join('')||'<tr><td colspan="7">Fichier vide</td></tr>';
     document.getElementById('csvPreviewMeta').textContent=`Relecture : ${insert} création(s), ${update} MAJ, ${skip} ignorée(s). Vérifiez puis cliquez Appliquer.`;
-    document.getElementById('csvApplyBtn').disabled=!parsed.rows.length;
+    document.getElementById('csvApplyBtn').disabled=!parsed.rows.length||insert+update===0;
   };
   reader.readAsText(file,'UTF-8');
   event.target.value='';
 }
 function applyCsvPreview(){
   if(!isPlanner()||!csvPreviewRows||!PD()) return;
-  let n=0;
-  csvPreviewRows.forEach(row=>{
-    const room=state.rooms.find(r=>String(r.code).toUpperCase()===String(row.local_code||'').toUpperCase()
-      || String(r.name).toUpperCase().includes(String(row.local_code||'').toUpperCase()));
-    if(!room||!row.plan_start||!row.plan_end) return;
-    const status=(row.status||'planned').toLowerCase();
-    if(status&&status!=='planned') return;
-    const art=getArticle(row.article_code);
-    const product=art?PD().productLabel(art):(row.article_code||'—');
-    const type=row.type||'Lot en cours';
-    const activity=type.startsWith('Lot')||type==='Lot en cours'?composeActivityLabel('Lot en cours',product):type;
-    const batch=row.lot||(art&&PD()?PD().nextLotNumber(art.code,state.activities,getMovements()):'—');
-    const existing=state.activities.find(a=>Number(a.roomId)===Number(room.id)&&a.batch===batch&&a.status==='planned');
-    const payload={
-      roomId:room.id,activity,product,batch,
-      team:'Équipe A',owner:'—',
-      planStart:row.plan_start.length===16?row.plan_start:row.plan_start,
-      planEnd:row.plan_end,
-      actualStart:'',actualEnd:'',
-      progress:0,status:'planned',
-      step:row.step||'',comment:row.comment||`Import CSV · qté th. ${row.qty_theorique||''} ${row.unit||''}${row.futs?` · ${row.futs} fûts`:''}`,
-      delayCategory:'none',updatedAt:new Date().toISOString()
-    };
+  let n=0,skipped=0;
+  csvPreviewRows.forEach((row,index)=>{
+    const {existing,payload,errors}=prepareCsvRow(row,index);
+    if(errors.length){skipped++;return;}
+    payload.updatedAt=new Date().toISOString();
     if(existing){
       Object.assign(existing,payload);
     }else{
-      state.activities.push({id:uid(),...payload,createdAt:new Date().toISOString()});
+      state.activities.push({...payload,id:uid(),createdAt:new Date().toISOString()});
     }
     n++;
   });
-  logChange('Import CSV',`${n} ligne(s) appliquée(s)`);
+  logChange('Import CSV',`${n} ligne(s) appliquée(s), ${skipped} ignorée(s)`);
   safePersist();renderAll();
   csvPreviewRows=null;
   document.getElementById('csvApplyBtn').disabled=true;
   closeDialog(document.getElementById('csvDialog'));
-  showToast(`Planning appliqué : ${n} ligne(s).`,'ok');
+  showToast(`Planning appliqué : ${n} ligne(s)${skipped?`, ${skipped} ignorée(s)`:''}.`,'ok');
 }
 
 window.PharmaDashboardAdapter={
@@ -2337,39 +2328,19 @@ window.PharmaDashboardAdapter={
   }
 };
 
-const baseExportMonthlyCSV=exportMonthlyCSV;
-exportMonthlyCSV=function(){
-  const metrics=monthlyMetrics();
-  const rows=[
-    ['Rapport mensuel',fmtMonth(state.selectedMonth)],['Capacité',capacityDescription()],['Locaux actifs',activeRooms().length],['Heures disponibles',Math.round(metrics.capacityHours)],['Taux d’occupation',`${metrics.occupancy}%`],['Respect planning',`${metrics.respect}%`],['Retards / blocages',metrics.delayed],['Retard cumulé',formatDuration(metrics.delayMinutes)],['Avancement moyen',`${metrics.avg}%`],['Activités réalisées',metrics.complete],['Activités planifiées',metrics.planned],[],
-    ['Date','Local','Activité','Produit','Lot','Équipe','Début planifié','Fin planifiée','Début réel','Fin réelle','Avancement','Retard cumulé','Cause','Statut']
-  ];
-  monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).forEach(a=>{const room=getRoom(a.roomId);rows.push([fmtDate(a.planStart),room?.name||'',a.activity,a.product,a.batch,a.team,fmtDateTime(a.planStart),fmtDateTime(a.planEnd),fmtDateTime(a.actualStart),fmtDateTime(a.actualEnd),`${a.progress}%`,formatDuration(delayMinutes(a)),DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))],statusLabel(a,monthReference(state.selectedMonth))]);});
-  const csv='\ufeff'+rows.map(row=>row.map(csvEscape).join(';')).join('\n');
-  try{downloadBlob(csv,'text/csv;charset=utf-8',`rapport_locaux_${state.selectedMonth}.csv`);showToast('Rapport CSV exporté.','ok');}catch(error){console.error(error);showToast('Export CSV impossible.','bad');}
-};
-
-buildPrintReport=function(){
-  const metrics=monthlyMetrics();
-  const rows=monthActivities().sort((a,b)=>new Date(a.planStart)-new Date(b.planStart)).map(a=>{const room=getRoom(a.roomId);return `<tr><td>${fmtDate(a.planStart)}</td><td>${escapeHTML(room?.name||'')}</td><td>${escapeHTML(a.activity)}</td><td>${escapeHTML(a.batch)}</td><td>${fmtTime(a.planStart)}–${fmtTime(a.planEnd)}</td><td>${a.progress}%</td><td>${formatDuration(delayMinutes(a))}</td><td>${DELAY_LABELS[effectiveDelayCategory(a,monthReference(state.selectedMonth))]}</td><td>${statusLabel(a,monthReference(state.selectedMonth))}</td></tr>`;}).join('');
-  document.getElementById('printReport').innerHTML=`<h1>Rapport mensuel — locaux d’activité</h1><p>${fmtMonth(state.selectedMonth)}</p><p>Édité le ${new Date().toLocaleString('fr-FR')} · ${escapeHTML(timezoneLabel())}</p><p>Capacité : ${escapeHTML(capacityDescription())} · ${activeRooms().length} local(aux) actif(s)</p><div class="print-kpis"><div class="print-kpi"><b>${metrics.occupancy}%</b><span>Occupation</span></div><div class="print-kpi"><b>${metrics.respect}%</b><span>Respect planning</span></div><div class="print-kpi"><b>${metrics.delayed}</b><span>Retards / blocages</span></div><div class="print-kpi"><b>${formatDuration(metrics.delayMinutes)}</b><span>Retard cumulé</span></div><div class="print-kpi"><b>${metrics.avg}%</b><span>Avancement moyen</span></div><div class="print-kpi"><b>${metrics.complete}/${metrics.planned}</b><span>Réalisées / planifiées</span></div></div><h2>Détail des activités</h2><table class="print-table"><thead><tr><th>Date</th><th>Local</th><th>Activité</th><th>Lot</th><th>Planning</th><th>Avancement</th><th>Retard</th><th>Cause</th><th>Statut</th></tr></thead><tbody>${rows||'<tr><td colspan="9">Aucune activité</td></tr>'}</tbody></table><p class="print-note">Calcul d’occupation basé sur la capacité paramétrée dans le dashboard.</p>`;
-};
-
-
 init();
 
 </script>
 <script>
 window.PHARMA_SUPABASE_CONFIG = window.PHARMA_SUPABASE_CONFIG || {
   enabled: true,
-  // Projet dédié trs-pharma (YOLO migrate)
+  // Projet dédié trs-pharma
   url: 'https://rzxnowngjudicmwzjdjo.supabase.co',
   publishableKey: 'sb_publishable_HWb9jdd-6o8_l0K0102ngg_im_iuQBU',
-  // Fallback anon legacy si publishable bloquée par le client
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6eG5vd25nanVkaWNtd3pqZGpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NTk4MjcsImV4cCI6MjA5NTIzNTgyN30.YKbEiC-1EhnGb6GT43Gfkr-3dJ1Rc0yzOY0HPQ7l8rE',
   schema: 'locaux_dash',
   redirectTo: window.location.protocol.startsWith('http') ? window.location.href.split('#')[0] : '',
-  libraryUrl: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
+  libraryUrl: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.2/dist/umd/supabase.min.js',
+  libraryIntegrity: 'sha384-sgcvElP/LlNRtORGYFLO/9K/bENcpJK19HgvqslWXog6d8f/Va4TpltGiBlGntCM'
 };
 </script>
 <script src="./supabase-client.js"></script>

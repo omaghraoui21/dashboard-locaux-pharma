@@ -21,7 +21,10 @@
     syncing: false,
     lastSyncAt: '',
     baseline: null,
-    pullTimer: null,
+    syncTimer: null,
+    realtimeTimer: null,
+    flushPromise: null,
+    syncPromise: null,
     authSubscription: null,
     config: null
   };
@@ -66,7 +69,8 @@
       enabled: globalConfig.enabled !== false && Boolean(url && key && !placeholder),
       redirectTo: globalConfig.redirectTo || (location.protocol === 'http:' || location.protocol === 'https:' ? location.href.split('#')[0] : ''),
       schema: globalConfig.schema || 'public',
-      libraryUrl: globalConfig.libraryUrl || 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
+      libraryUrl: globalConfig.libraryUrl || 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+      libraryIntegrity: String(globalConfig.libraryIntegrity || '').trim()
     };
   }
 
@@ -127,8 +131,8 @@
       id: Number(room.id),
       name: String(room.name || '').trim(),
       zone: String(room.zone || 'Zone de production').trim(),
-      code: String(room.code || '').trim() || null,
-      kind: String(room.kind || '').trim() || null,
+      code: String(room.code || '').trim(),
+      kind: String(room.kind || 'generique').trim() || 'generique',
       hygiene: room.hygiene === 'a_nettoyer' ? 'a_nettoyer' : 'propre',
       is_active: room.isActive !== false,
       created_at: parseDateToIso(room.createdAt) || undefined,
@@ -201,6 +205,63 @@
     };
   }
 
+  function articleToDb(article) {
+    return {
+      code: String(article.code || '').trim().toUpperCase(),
+      label: String(article.label || article.code || '').trim(),
+      family: article.family || 'SF',
+      unit: String(article.unit || 'u').trim(),
+      default_qty: Number(article.defaultQty || 1),
+      default_futs: Number(article.defaultFuts || 0),
+      active: article.active !== false
+    };
+  }
+
+  function articleFromDb(row) {
+    return {
+      code: row.code,
+      label: row.label,
+      family: row.family,
+      unit: row.unit,
+      defaultQty: Number(row.default_qty || 1),
+      defaultFuts: Number(row.default_futs || 0),
+      active: row.active !== false
+    };
+  }
+
+  function movementToDb(movement) {
+    return {
+      id: String(movement.id),
+      sens: movement.sens === 'sortie' ? 'sortie' : 'entree',
+      article_code: String(movement.articleCode || '').trim().toUpperCase(),
+      batch: String(movement.batch || '—'),
+      qty: Number(movement.qty || 0),
+      unit: String(movement.unit || 'u'),
+      futs: Number(movement.futs || 0),
+      place: String(movement.place || ''),
+      comment: String(movement.comment || ''),
+      at: parseDateToIso(movement.at) || undefined
+    };
+  }
+
+  function movementFromDb(row) {
+    const role = row.created_by === runtime.session?.user?.id ? runtime.profile?.role : null;
+    return {
+      id: String(row.id),
+      sens: row.sens === 'sortie' ? 'sortie' : 'entree',
+      articleCode: row.article_code,
+      batch: row.batch || '—',
+      qty: Number(row.qty || 0),
+      unit: row.unit || 'u',
+      futs: Number(row.futs || 0),
+      place: row.place || '',
+      comment: row.comment || '',
+      at: row.at || row.created_at || '',
+      by: role === 'planner' ? 'Planificateur' : role === 'manager' ? 'Manager' : 'Utilisateur',
+      createdAt: row.created_at || ''
+    };
+  }
+
   function settingsToDb(settings) {
     return {
       id: 1,
@@ -233,7 +294,9 @@
   function canonicalState(state) {
     const rooms = (state?.rooms || []).map(roomToDb).map(stripUndefined).sort((a, b) => a.id - b.id);
     const activities = (state?.activities || []).map(activityToDb).map(stripUndefined).sort((a, b) => a.id.localeCompare(b.id));
-    return { rooms, activities, settings: stripUndefined(settingsToDb(state?.settings || {})) };
+    const articles = (state?.articles || []).map(articleToDb).map(stripUndefined).sort((a, b) => a.code.localeCompare(b.code));
+    const movements = (state?.movements || []).map(movementToDb).map(stripUndefined).sort((a, b) => a.id.localeCompare(b.id));
+    return { rooms, activities, articles, movements, settings: stripUndefined(settingsToDb(state?.settings || {})) };
   }
 
   function stripUndefined(value) {
@@ -242,6 +305,16 @@
 
   function signature(value) {
     return JSON.stringify(value);
+  }
+
+  function sameOutboxItem(left, right) {
+    return left?.queuedAt === right?.queuedAt
+      && left?.operation === right?.operation
+      && signature(left?.record) === signature(right?.record);
+  }
+
+  function outboxAttemptKey(item) {
+    return `${item.key}:${item.queuedAt}:${item.operation}:${signature(item.record)}`;
   }
 
   function queueMutation(entity, operation, record, id) {
@@ -284,11 +357,13 @@
     }
     diffCollection('room', runtime.baseline.rooms, next.rooms, 'id');
     diffCollection('activity', runtime.baseline.activities, next.activities, 'id');
+    diffCollection('article', runtime.baseline.articles, next.articles, 'code');
+    diffCollection('stock_movement', runtime.baseline.movements, next.movements, 'id');
     if (signature(runtime.baseline.settings) !== signature(next.settings)) {
       queueMutation('settings', 'upsert', next.settings, 1);
     }
     runtime.baseline = next;
-    if (runtime.enabled && runtime.session?.user && runtime.profile?.role === 'planner') {
+    if (runtime.enabled && runtime.session?.user) {
       scheduleSync(50);
     }
   }
@@ -308,19 +383,23 @@
   }
 
   async function fetchSnapshot() {
-    const [roomsResult, activitiesResult, settingsResult, logResult] = await Promise.all([
+    const [roomsResult, activitiesResult, articlesResult, movementsResult, settingsResult, logResult] = await Promise.all([
       runtime.client.from('rooms').select('*').order('id'),
       runtime.client.from('activities').select('*').order('plan_start'),
+      runtime.client.from('articles').select('*').order('code'),
+      runtime.client.from('stock_movements').select('*').order('at'),
       runtime.client.from('settings').select('*').eq('id', 1).maybeSingle(),
       runtime.client.from('change_log').select('id, entity_type, entity_id, action, detail, changed_at').order('changed_at', { ascending: false }).limit(MAX_LOGS)
     ]);
 
-    const errors = [roomsResult.error, activitiesResult.error, settingsResult.error, logResult.error].filter(Boolean);
+    const errors = [roomsResult.error, activitiesResult.error, articlesResult.error, movementsResult.error, settingsResult.error, logResult.error].filter(Boolean);
     if (errors.length) throw errors[0];
 
     return {
       rooms: (roomsResult.data || []).map(roomFromDb),
       activities: (activitiesResult.data || []).map(activityFromDb),
+      articles: (articlesResult.data || []).map(articleFromDb),
+      movements: (movementsResult.data || []).map(movementFromDb),
       settings: settingsFromDb(settingsResult.data || {}),
       changeLog: (logResult.data || []).slice().reverse().map(changeLogFromDb)
     };
@@ -335,7 +414,7 @@
     if (!error) return 'Erreur de synchronisation inconnue.';
     if (error.code === '23P01') return 'Chevauchement détecté par le serveur : corrigez le créneau du local.';
     if (error.code === '23503') return 'Le local lié à cette activité n’existe plus sur le serveur.';
-    if (error.code === '42501' || /row-level security/i.test(error.message || '')) return 'Écriture refusée : le compte connecté n’a pas le rôle Planificateur.';
+    if (error.code === '42501' || /row-level security/i.test(error.message || '')) return 'Écriture refusée pour ce compte.';
     return error.message || 'Synchronisation impossible.';
   }
 
@@ -351,6 +430,14 @@
         : runtime.client.from('rooms').upsert(stripUndefined(item.record), { onConflict: 'id' });
     } else if (item.entity === 'settings') {
       query = runtime.client.from('settings').upsert(stripUndefined(item.record), { onConflict: 'id' });
+    } else if (item.entity === 'article') {
+      query = item.operation === 'delete'
+        ? runtime.client.from('articles').delete().eq('code', item.id)
+        : runtime.client.from('articles').upsert(stripUndefined(item.record), { onConflict: 'code' });
+    } else if (item.entity === 'stock_movement') {
+      query = item.operation === 'delete'
+        ? runtime.client.from('stock_movements').delete().eq('id', item.id)
+        : runtime.client.from('stock_movements').upsert(stripUndefined(item.record), { onConflict: 'id' });
     } else {
       throw new Error(`Entité de synchronisation inconnue : ${item.entity}`);
     }
@@ -358,107 +445,162 @@
     if (error) throw error;
   }
 
-  async function flushOutbox() {
-    if (!runtime.enabled || !runtime.session?.user || runtime.profile?.role !== 'planner') return false;
-    let queue = getOutbox();
-    if (!queue.length) return true;
+  function canPushItem(item) {
+    return runtime.profile?.role === 'planner' || (runtime.profile?.role === 'manager' && item.entity === 'stock_movement');
+  }
+
+  async function drainOutbox() {
+    if (!runtime.enabled || !runtime.session?.user) return false;
+    if (!getOutbox().length) return true;
 
     runtime.syncing = true;
     publishContext();
     let changed = false;
+    const attempted = new Set();
 
-    for (const originalItem of [...queue]) {
-      const item = queue.find(candidate => candidate.key === originalItem.key);
-      if (!item || item.blocked) continue;
-      try {
-        await executeOutboxItem(item);
-        queue = queue.filter(candidate => candidate.key !== item.key);
-        changed = true;
-        runtime.backendReachable = true;
-      } catch (error) {
-        console.error('[PharmaSync] Envoi impossible', item, error);
-        runtime.backendReachable = !isNetworkLikeError(error);
-        const current = queue.find(candidate => candidate.key === item.key);
-        if (current) {
-          current.attempts = Number(current.attempts || 0) + 1;
-          current.error = humanSyncError(error);
-          if (['23P01', '23503', '42501'].includes(error.code) || /row-level security/i.test(error.message || '')) {
-            current.blocked = true;
-            notify(current.error, 'bad');
-          }
-        }
-        if (isNetworkLikeError(error)) break;
-      }
-      setOutbox(queue);
-    }
-
-    runtime.syncing = false;
-    if (changed) {
-      runtime.lastSyncAt = new Date().toISOString();
-      setMeta({ lastSyncAt: runtime.lastSyncAt });
-    }
-    setOutbox(queue);
-    publishContext();
-    return queue.length === 0;
-  }
-
-  async function pullAndApply({ force = false } = {}) {
-    if (!runtime.enabled || !runtime.session?.user) return;
-    runtime.syncing = true;
-    publishContext();
     try {
-      const snapshot = await fetchSnapshot();
-      runtime.backendReachable = true;
-      const localState = adapter()?.getState?.() || readJSON(CACHE_KEY, {});
-      const meta = getMeta();
-      const firstServerEmpty = !meta.hasInitialPull && snapshot.activities.length === 0 && (localState.activities || []).length > 0;
+      while (true) {
+        const item = getOutbox().find(candidate => {
+          return !candidate.blocked && canPushItem(candidate) && !attempted.has(outboxAttemptKey(candidate));
+        });
+        if (!item) break;
+        attempted.add(outboxAttemptKey(item));
 
-      if (firstServerEmpty && !force) {
-        snapshot.activities = clone(localState.activities || []);
-        notify('Supabase ne contient encore aucune activité. Utilisez « Migrer les données locales » avec un compte Planificateur.', '');
-        publishContext({ migrationSuggested: true });
+        try {
+          await executeOutboxItem(item);
+          const latest = getOutbox();
+          const current = latest.find(candidate => candidate.key === item.key);
+          if (sameOutboxItem(current, item)) {
+            setOutbox(latest.filter(candidate => candidate.key !== item.key));
+          }
+          changed = true;
+          runtime.backendReachable = true;
+        } catch (error) {
+          console.error('[PharmaSync] Envoi impossible', item, error);
+          runtime.backendReachable = !isNetworkLikeError(error);
+          const latest = getOutbox();
+          const current = latest.find(candidate => candidate.key === item.key);
+          if (sameOutboxItem(current, item)) {
+            current.attempts = Number(current.attempts || 0) + 1;
+            current.error = humanSyncError(error);
+            if (['23P01', '23503', '42501'].includes(error.code) || /row-level security/i.test(error.message || '')) {
+              current.blocked = true;
+              notify(current.error, 'bad');
+            }
+            setOutbox(latest);
+          }
+          if (isNetworkLikeError(error)) break;
+        }
       }
-
-      adapter()?.applyRemoteSnapshot?.(snapshot, { preserveLocalActivities: firstServerEmpty && !force });
-      resetBaseline(adapter()?.getState?.() || localState);
-      runtime.lastSyncAt = new Date().toISOString();
-      setMeta(firstServerEmpty && !force
-        ? { hasInitialPull: false, migrationPending: true, lastSyncAt: runtime.lastSyncAt }
-        : { hasInitialPull: true, migrationPending: false, lastSyncAt: runtime.lastSyncAt });
-    } catch (error) {
-      console.error('[PharmaSync] Lecture serveur impossible', error);
-      runtime.backendReachable = !isNetworkLikeError(error);
-      notify('Serveur indisponible : le dashboard continue avec le cache local.', 'bad');
+      if (changed) {
+        runtime.lastSyncAt = new Date().toISOString();
+        setMeta({ lastSyncAt: runtime.lastSyncAt });
+      }
+      return !getOutbox().some(canPushItem);
     } finally {
       runtime.syncing = false;
       publishContext();
     }
   }
 
-  async function syncNow() {
+  function flushOutbox() {
+    if (runtime.flushPromise) return runtime.flushPromise;
+    const promise = drainOutbox().finally(() => {
+      if (runtime.flushPromise === promise) runtime.flushPromise = null;
+    });
+    runtime.flushPromise = promise;
+    return promise;
+  }
+
+  function shouldPreserveLocalState(localState, meta) {
+    if (meta.hasInitialPull) return false;
+    if (meta.migrationPending) return true;
+    const hasData = ['rooms', 'activities', 'articles', 'movements']
+      .some(key => Array.isArray(localState?.[key]) && localState[key].length > 0);
+    if (!hasData) return false;
+    const logs = Array.isArray(localState?.changeLog) ? localState.changeLog : [];
+    const untouchedSeed = logs.length === 1
+      && logs[0].action === 'Initialisation'
+      && /initialis/i.test(logs[0].detail || '')
+      && !(localState?.activities || []).length
+      && !(localState?.movements || []).length;
+    return !untouchedSeed;
+  }
+
+  async function pullAndApply({ force = false } = {}) {
+    if (!runtime.enabled || !runtime.session?.user) return false;
+    const localState = adapter()?.getState?.() || readJSON(CACHE_KEY, {});
+    const meta = getMeta();
+    if (!force && shouldPreserveLocalState(localState, meta)) {
+      setMeta({ hasInitialPull: false, migrationPending: true });
+      notify('Des données locales doivent être migrées avant la première lecture Supabase.', '');
+      publishContext({ migrationSuggested: true });
+      return false;
+    }
+
+    runtime.syncing = true;
+    publishContext();
+    try {
+      const snapshot = await fetchSnapshot();
+      runtime.backendReachable = true;
+      adapter()?.applyRemoteSnapshot?.(snapshot);
+      resetBaseline(adapter()?.getState?.() || localState);
+      runtime.lastSyncAt = new Date().toISOString();
+      setMeta({ hasInitialPull: true, migrationPending: false, lastSyncAt: runtime.lastSyncAt });
+      return true;
+    } catch (error) {
+      console.error('[PharmaSync] Lecture serveur impossible', error);
+      runtime.backendReachable = !isNetworkLikeError(error);
+      notify('Serveur indisponible : le dashboard continue avec le cache local.', 'bad');
+      throw error;
+    } finally {
+      runtime.syncing = false;
+      publishContext();
+    }
+  }
+
+  async function runSync() {
     if (!runtime.enabled) {
       notify('Supabase n’est pas configuré. Le dashboard reste en mode local.', '');
-      return;
+      return false;
     }
     if (!runtime.session?.user) {
       publishContext();
       notify('Connectez-vous pour synchroniser les données.', 'bad');
-      return;
+      return false;
     }
-    await flushOutbox();
-    await pullAndApply();
+    const localState = adapter()?.getState?.() || readJSON(CACHE_KEY, {});
+    if (shouldPreserveLocalState(localState, getMeta())) {
+      setMeta({ hasInitialPull: false, migrationPending: true });
+      notify('Des données locales doivent être migrées avant la première synchronisation Supabase.', '');
+      publishContext({ migrationSuggested: true });
+      return false;
+    }
+    if (!await flushOutbox()) return false;
+    return pullAndApply();
+  }
+
+  function syncNow() {
+    if (runtime.syncPromise) return runtime.syncPromise;
+    const promise = runSync().finally(() => {
+      if (runtime.syncPromise === promise) runtime.syncPromise = null;
+    });
+    runtime.syncPromise = promise;
+    return promise;
   }
 
   function scheduleSync(delay = 250) {
-    clearTimeout(runtime.pullTimer);
-    runtime.pullTimer = setTimeout(() => syncNow(), delay);
+    clearTimeout(runtime.syncTimer);
+    runtime.syncTimer = setTimeout(() => {
+      syncNow().catch(error => console.error('[PharmaSync] Synchronisation planifiée impossible', error));
+    }, delay);
   }
 
   function scheduleRealtimePull() {
-    clearTimeout(runtime.pullTimer);
-    runtime.pullTimer = setTimeout(async () => {
+    clearTimeout(runtime.realtimeTimer);
+    runtime.realtimeTimer = setTimeout(() => {
       if (!runtime.session?.user) return;
-      await pullAndApply({ force: true });
+      syncNow().catch(error => console.error('[PharmaSync] Relecture Realtime impossible', error));
     }, 180);
   }
 
@@ -470,6 +612,8 @@
       .channel('pharma-dashboard-v4')
       .on('postgres_changes', { event: '*', schema: runtime.config.schema, table: 'rooms' }, scheduleRealtimePull)
       .on('postgres_changes', { event: '*', schema: runtime.config.schema, table: 'activities' }, scheduleRealtimePull)
+      .on('postgres_changes', { event: '*', schema: runtime.config.schema, table: 'articles' }, scheduleRealtimePull)
+      .on('postgres_changes', { event: '*', schema: runtime.config.schema, table: 'stock_movements' }, scheduleRealtimePull)
       .on('postgres_changes', { event: '*', schema: runtime.config.schema, table: 'settings' }, scheduleRealtimePull)
       .on('postgres_changes', { event: 'INSERT', schema: runtime.config.schema, table: 'change_log' }, scheduleRealtimePull)
       .subscribe(status => {
@@ -496,8 +640,7 @@
       runtime.backendReachable = true;
       publishContext();
       await subscribeRealtime();
-      if (runtime.profile.role === 'planner') await flushOutbox();
-      await pullAndApply();
+      await syncNow();
     } catch (error) {
       console.error('[PharmaSync] Initialisation de session impossible', error);
       runtime.backendReachable = !isNetworkLikeError(error);
@@ -516,7 +659,8 @@
 
   async function sendMagicLink(email) {
     if (!runtime.enabled) throw new Error('Supabase n’est pas configuré.');
-    const options = runtime.config.redirectTo ? { emailRedirectTo: runtime.config.redirectTo } : undefined;
+    const options = { shouldCreateUser: false };
+    if (runtime.config.redirectTo) options.emailRedirectTo = runtime.config.redirectTo;
     const { data, error } = await runtime.client.auth.signInWithOtp({ email: email.trim(), options });
     if (error) throw error;
     return data;
@@ -529,27 +673,51 @@
     await handleSession(null);
   }
 
-  async function migrateLocalData() {
-    if (!runtime.session?.user || runtime.profile?.role !== 'planner') {
-      throw new Error('La migration nécessite un compte Planificateur connecté.');
+  async function performMigration() {
+    if (!runtime.session?.user || !['manager', 'planner'].includes(runtime.profile?.role)) {
+      throw new Error('La migration nécessite un membre connecté.');
     }
     const localState = adapter()?.getState?.() || readJSON(CACHE_KEY, null);
     if (!localState) throw new Error('Aucune donnée locale v3 à migrer.');
 
     const normalized = canonicalState(localState);
-    normalized.rooms.forEach(record => queueMutation('room', 'upsert', record, record.id));
-    queueMutation('settings', 'upsert', normalized.settings, 1);
-    normalized.activities.forEach(record => queueMutation('activity', 'upsert', record, record.id));
-
-    notify(`${normalized.activities.length} activité(s) placée(s) dans la file de migration.`, 'ok');
-    await flushOutbox();
-    const remaining = getOutbox();
-    if (remaining.some(item => item.blocked)) {
-      throw new Error('Certaines lignes ont été refusées. Consultez l’état de synchronisation et corrigez les chevauchements.');
+    const planner = runtime.profile.role === 'planner';
+    if (!planner && normalized.activities.length) {
+      throw new Error('Connectez un compte Planificateur pour migrer le planning local.');
     }
-    await pullAndApply({ force: true });
-    setMeta({ hasInitialPull: true });
-    return { rooms: normalized.rooms.length, activities: normalized.activities.length };
+    if (planner) {
+      normalized.rooms.forEach(record => queueMutation('room', 'upsert', record, record.id));
+      queueMutation('settings', 'upsert', normalized.settings, 1);
+      normalized.articles.forEach(record => queueMutation('article', 'upsert', record, record.code));
+      normalized.activities.forEach(record => queueMutation('activity', 'upsert', record, record.id));
+    }
+    normalized.movements.forEach(record => queueMutation('stock_movement', 'upsert', record, record.id));
+
+    notify(`${normalized.activities.length} activité(s) et ${normalized.movements.length} mouvement(s) placés dans la file de migration.`, 'ok');
+    if (!await flushOutbox()) {
+      const blocked = getOutbox().some(item => item.blocked);
+      throw new Error(blocked
+        ? 'Certaines lignes ont été refusées. Corrigez-les avant de réessayer.'
+        : 'Migration incomplète : des opérations restent en attente.');
+    }
+    const remaining = getOutbox();
+    if (remaining.some(canPushItem)) throw new Error('Migration incomplète : des opérations autorisées restent en attente.');
+    if (!await pullAndApply({ force: true })) throw new Error('La vérification serveur après migration a échoué.');
+    return {
+      rooms: planner ? normalized.rooms.length : 0,
+      activities: planner ? normalized.activities.length : 0,
+      articles: planner ? normalized.articles.length : 0,
+      movements: normalized.movements.length
+    };
+  }
+
+  async function migrateLocalData() {
+    if (runtime.syncPromise) await runtime.syncPromise;
+    const promise = performMigration().finally(() => {
+      if (runtime.syncPromise === promise) runtime.syncPromise = null;
+    });
+    runtime.syncPromise = promise;
+    return promise;
   }
 
   function retryBlockedItems() {
@@ -575,6 +743,10 @@
       const script = document.createElement('script');
       script.src = runtime.config.libraryUrl;
       script.async = true;
+      if (runtime.config.libraryIntegrity) {
+        script.integrity = runtime.config.libraryIntegrity;
+        script.crossOrigin = 'anonymous';
+      }
       script.dataset.pharmaSupabaseLibrary = '1';
       script.onload = resolve;
       script.onerror = () => reject(new Error('Bibliothèque Supabase indisponible.'));
