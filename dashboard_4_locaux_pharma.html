@@ -2362,9 +2362,11 @@ init();
 <script>
 window.PHARMA_SUPABASE_CONFIG = window.PHARMA_SUPABASE_CONFIG || {
   enabled: true,
-  url: 'https://vbgdtvbnnqxzdsoztmwv.supabase.co',
-  publishableKey: 'sb_publishable_aAIKfh4e5akC0Bnk2J4s8g_w9JSVi0u',
-  // Schéma isolé (ne touche pas les tables DPI existantes du projet)
+  // Projet dédié trs-pharma (YOLO migrate)
+  url: 'https://rzxnowngjudicmwzjdjo.supabase.co',
+  publishableKey: 'sb_publishable_HWb9jdd-6o8_l0K0102ngg_im_iuQBU',
+  // Fallback anon legacy si publishable bloquée par le client
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6eG5vd25nanVkaWNtd3pqZGpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NTk4MjcsImV4cCI6MjA5NTIzNTgyN30.YKbEiC-1EhnGb6GT43Gfkr-3dJ1Rc0yzOY0HPQ7l8rE',
   schema: 'locaux_dash',
   redirectTo: window.location.protocol.startsWith('http') ? window.location.href.split('#')[0] : '',
   libraryUrl: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'

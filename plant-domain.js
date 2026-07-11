@@ -7,12 +7,14 @@
 
   const DEFAULT_ARTICLES = [
     { code: 'FSF600', label: 'Aerofor 12 µg (SF / process)', family: 'SF', unit: 'gélules', defaultQty: 360000, defaultFuts: 10, active: true },
+    { code: 'FSF601', label: 'Réservé / inactif', family: 'SF', unit: 'gélules', defaultQty: 360000, defaultFuts: 10, active: false },
     { code: 'FSF602', label: 'Aeronide 200 µg (SF / process)', family: 'SF', unit: 'gélules', defaultQty: 360000, defaultFuts: 10, active: true },
     { code: 'FSF603', label: 'Aeronide 400 µg (SF / process)', family: 'SF', unit: 'gélules', defaultQty: 360000, defaultFuts: 10, active: true },
-    { code: 'FSF604', label: 'Pochette Aerofor 12 · Combifor 12/200', family: 'pochette', unit: 'pochettes', defaultQty: 1, defaultFuts: 0, active: true },
-    { code: 'FSF605', label: 'Pochette Aerofor 12 · Combifor 12/400', family: 'pochette', unit: 'pochettes', defaultQty: 1, defaultFuts: 0, active: true },
-    { code: 'FSF606', label: 'Pochette Aeronide 200 · Combifor 12/200', family: 'pochette', unit: 'pochettes', defaultQty: 1, defaultFuts: 0, active: true },
-    { code: 'FSF607', label: 'Pochette Aeronide 400 · Combifor 12/400', family: 'pochette', unit: 'pochettes', defaultQty: 1, defaultFuts: 0, active: true },
+    // Mapping YOLO v1 pochettes (modifiable via UI Articles)
+    { code: 'FSF604', label: 'Pochette Aerofor 12 · pour Combifor 12/200', family: 'pochette', unit: 'pochettes', defaultQty: 1, defaultFuts: 0, active: true },
+    { code: 'FSF605', label: 'Pochette Aerofor 12 · pour Combifor 12/400', family: 'pochette', unit: 'pochettes', defaultQty: 1, defaultFuts: 0, active: true },
+    { code: 'FSF606', label: 'Pochette Aeronide 200 · pour Combifor 12/200', family: 'pochette', unit: 'pochettes', defaultQty: 1, defaultFuts: 0, active: true },
+    { code: 'FSF607', label: 'Pochette Aeronide 400 · pour Combifor 12/400', family: 'pochette', unit: 'pochettes', defaultQty: 1, defaultFuts: 0, active: true },
     { code: 'MP9', label: 'MP / Mélange · 9 kg', family: 'MP', unit: 'kg', defaultQty: 9, defaultFuts: 0, active: true },
     { code: 'PF600', label: 'AEROFOR 12 µg – BTE 30', family: 'PF', unit: 'boîtes', defaultQty: 1, defaultFuts: 0, active: true },
     { code: 'PF601', label: 'AEROFOR 12 µg – BTE 60', family: 'PF', unit: 'boîtes', defaultQty: 1, defaultFuts: 0, active: true },
