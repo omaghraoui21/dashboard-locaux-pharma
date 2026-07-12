@@ -192,6 +192,7 @@ check('shipped HTML cloud config is production-shaped', () => {
   assert.ok(/id="stockAtFilter"[^>]*type="datetime-local"/.test(html), 'stock instant selector required');
   assert.ok(/id="mAt"[^>]*type="datetime-local"[^>]*required/.test(html), 'effective movement time required');
   assert.ok(html.includes('Toutes les données (CSV)') && html.includes('exportAllCSV()') && html.includes('exportStockCSV()'), 'complete and stock exports required');
+  assert.ok(/function exportStockCSV\(\)[\s\S]*?reference=stockReferenceTime\(\)[\s\S]*?filter\(movement=>new Date\(movement\.at\)<=reference\)/.test(html), 'stock export must respect the selected instant');
   ['LOCAUX', 'ACTIVITÉS', 'ARTICLES', 'MOUVEMENTS A26', 'PARAMÈTRES', 'JOURNAL'].forEach(section => assert.ok(html.includes(`'${section}'`), `missing full export section ${section}`));
   assert.ok(/getMovements\(\)[\s\S]*?slice\(0,20\)/.test(html), 'A26 overview must keep the latest 20 movements');
   assert.ok(/effectiveAt\.getTime\(\)>Date\.now\(\)\+60000/.test(html), 'future stock movements must be rejected');
@@ -253,7 +254,19 @@ check('client-served JS has no admin secrets', () => {
     const t = read(f);
     assert.ok(!/service_role/.test(t), `${f} must not contain service_role`);
     assert.ok(!/\bsbp_/.test(t), `${f} must not contain sbp_`);
+    assert.ok(!/\b(?:ghp_|github_pat_)[A-Za-z0-9_]{20,}/.test(t), `${f} must not contain GitHub tokens`);
+    assert.ok(!/\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/.test(t), `${f} must not contain JWT secrets`);
   }
+});
+
+check('deployment documentation matches the authenticated product', () => {
+  const setup = read('README_SUPABASE.md');
+  const tokens = read('TOKENS_ET_DEPLOIEMENT.md');
+  for (const missing of ['MIGRATION_LOCALSTORAGE_V3.md', 'supabase-config.example.js', '.env.example']) {
+    assert.ok(!setup.includes(missing), `documentation must not reference missing ${missing}`);
+  }
+  assert.ok(!/mode local-first|PIN Planificateur en local|Compte cloud \| Non/i.test(`${setup}\n${tokens}`), 'documentation must not advertise an authentication bypass');
+  assert.ok(tokens.includes('Compte Supabase autorisé') && setup.includes('obligatoire pour afficher les données'), 'login requirement must be explicit');
 });
 
 check('DEFAULT_PLANT room kinds cover A23–D18 via HTML seed or domain', () => {
@@ -386,16 +399,17 @@ check('schema is reproducible for locaux_dash and Realtime', () => {
   assert.ok(/drop column if exists by_role/i.test(sql));
 });
 
-// Optional: smoke if server up
-check('smoke_check.sh exits 0 when local server available', () => {
+check('smoke_check.sh passes on an isolated local server', () => {
+  const port = String(18000 + process.pid % 1000);
+  const pidFile = `/tmp/pharma-dashboard-test-${process.pid}.pid`;
+  const logFile = `/tmp/pharma-dashboard-test-${process.pid}.log`;
+  const env = { ...process.env, PORT: port, PID_FILE: pidFile, LOG_FILE: logFile };
   try {
-    execSync('bash ./smoke_check.sh', { cwd: ROOT, stdio: 'pipe', timeout: 60000 });
-  } catch (e) {
-    // If server not up, start and retry once
-    try {
-      execSync('bash ./serve.sh', { cwd: ROOT, stdio: 'pipe', timeout: 10000 });
-    } catch (_) { /* may already be running */ }
-    execSync('bash ./smoke_check.sh', { cwd: ROOT, stdio: 'pipe', timeout: 60000 });
+    execSync('bash ./serve.sh', { cwd: ROOT, env, stdio: 'pipe', timeout: 10000 });
+    execSync('bash ./smoke_check.sh', { cwd: ROOT, env, stdio: 'pipe', timeout: 60000 });
+  } finally {
+    try { process.kill(Number(fs.readFileSync(pidFile, 'utf8')), 'SIGTERM'); } catch (_) {}
+    for (const file of [pidFile, logFile]) try { fs.unlinkSync(file); } catch (_) {}
   }
 });
 

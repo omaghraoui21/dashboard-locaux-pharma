@@ -1841,13 +1841,14 @@ function exportAllCSV(){
   }catch(error){console.error(error);showToast('Export CSV complet impossible.','bad');}
 }
 function exportStockCSV(){
+  const reference=stockReferenceTime();
   const rows=[['Date / heure','Sens','Article','Libellé','Lot','Quantité','Unité','Fûts','Origine / Destination','Commentaire','Par']];
-  getMovements().slice().sort((a,b)=>new Date(a.at)-new Date(b.at)).forEach(movement=>{
+  getMovements().filter(movement=>new Date(movement.at)<=reference).sort((a,b)=>new Date(a.at)-new Date(b.at)).forEach(movement=>{
     rows.push([movement.at,movement.sens,movement.articleCode,getArticle(movement.articleCode)?.label||'',movement.batch,movement.qty,movement.unit,movement.futs,movement.place,movement.comment,movement.by]);
   });
   try{
-    downloadBlob('\ufeff'+rows.map(row=>row.map(csvEscape).join(';')).join('\n'),'text/csv;charset=utf-8',`mouvements_A26_${localDateValue(new Date())}.csv`);
-    showToast('Mouvements A26 exportés en CSV.','ok');
+    downloadBlob('\ufeff'+rows.map(row=>row.map(csvEscape).join(';')).join('\n'),'text/csv;charset=utf-8',`mouvements_A26_jusquau_${localDateTimeValue(reference).replaceAll(':','-')}.csv`);
+    showToast(`Mouvements A26 exportés jusqu’au ${fmtDateTime(reference)}.`,'ok');
   }catch(error){console.error(error);showToast('Export stock CSV impossible.','bad');}
 }
 function exportMonthlyCSV(){

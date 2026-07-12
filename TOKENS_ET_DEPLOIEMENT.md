@@ -1,14 +1,14 @@
 # Tokens & déploiement — ce dont l’outil a besoin
 
-## Prêt **sans aucun token** (mode local-first)
+## Accès requis en production
 
 | Besoin | Obligatoire ? | Comment |
 |--------|---------------|---------|
 | Navigateur moderne | **Oui** | Chrome / Edge / Firefox |
-| Hébergement fichiers statiques | **Oui** pour multi-postes LAN | `./serve.sh`, Nginx, IIS, partage HTTP |
-| Compte cloud | Non | Dashboard fonctionne hors-ligne + `localStorage` |
+| Hébergement fichiers statiques | **Oui** | GitHub Pages en production, `./serve.sh` en recette locale |
+| Compte Supabase autorisé | **Oui** | Profil `manager` ou `planner`; inscription publique fermée |
 
-→ **Dès aujourd’hui** : ouvrir `dashboard_4_locaux_pharma.html` via `./serve.sh` = utilisable.
+→ Le serveur local utilise la même authentification Supabase que le site public. Sans session autorisée, le dashboard reste masqué.
 
 ---
 
@@ -23,7 +23,7 @@
 | Profil + rôle | SQL admin | `locaux_dash.profiles`, `manager` ou `planner` |
 | Schéma SQL | SQL Editor | Fichier `supabase_schema.sql` |
 
-Pas besoin de : GitHub, Render, Vercel, Docker **si** vous servez les fichiers en interne.
+Le runtime n'a besoin d'aucun jeton de gestion Supabase. La publishable key présente dans le HTML est publique et les données restent protégées par Auth/RLS.
 
 ---
 
@@ -31,7 +31,7 @@ Pas besoin de : GitHub, Render, Vercel, Docker **si** vous servez les fichiers e
 
 | Service | Token / secret | Quand |
 |---------|----------------|--------|
-| **GitHub** | PAT ou SSH | Versionner le package, CI |
+| **GitHub** | GitHub CLI ou SSH | Versionner et déployer; ne jamais partager de PAT en conversation |
 | **Render / Netlify / Cloudflare Pages / IIS / Nginx** | Compte + éventuel token deploy | Mettre le HTML en HTTPS public ou intranet |
 | **Domaine / DNS** | — | URL stable pour magic links Supabase |
 | **Claude CLI** (`claude -p`) | Login Anthropic / Claude | Advisor dev seulement — **pas** runtime dashboard |
@@ -48,13 +48,13 @@ Pas besoin de : GitHub, Render, Vercel, Docker **si** vous servez les fichiers e
 2. Désignation des planificateurs  
 3. Révocation immédiate de tout jeton de gestion partagé dans une conversation  
 
-Sans ça → **prod locale / LAN** déjà OK.
+Sans comptes autorisés, aucune donnée opérationnelle n'est accessible.
 
 ---
 
 ## Checklist go-live simple (adhésion équipe)
 
-1. `./serve.sh` ou copier le dossier sur un partage HTTP interne  
+1. Ouvrir l'URL GitHub Pages ou lancer `./serve.sh` pour la recette locale
 2. Former : Manager = lecture + A26 E/S ; Planificateur = tout le reste  
 3. Importer le template CSV planning (Excel → enregistrer CSV UTF-8)  
 4. Utiliser la production Supabase déjà configurée pour le multi-postes  

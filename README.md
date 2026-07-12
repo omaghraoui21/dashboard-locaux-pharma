@@ -25,7 +25,7 @@ Ancien branchement `dpi-trs-tracker` : schéma `locaux_dash` y reste en place ma
 
 Les inscriptions publiques sont désactivées. Le compte du propriétaire est confirmé et possède un profil `planner` actif dans `locaux_dash.profiles`; son accès lecture/écriture/Realtime a été validé sur le site public. Avant d'inviter une adresse qui n'appartient pas à l'équipe Supabase, configurer un SMTP dédié; créer ensuite explicitement sa ligne avec le rôle `manager` ou `planner`. Aucun mot de passe ne doit être conservé dans ce dépôt.
 
-Les trois comptes techniques de recette sont bannis; leurs sessions, refresh tokens et profils ont été supprimés. Seul le profil réel du propriétaire reste actif.
+Les trois comptes techniques de recette sont bannis; leurs sessions, refresh tokens et profils ont été supprimés. Deux profils Planificateur confirmés sont actifs. Aucun e-mail de compte n'est publié dans ce dépôt.
 
 ## Utilisation
 

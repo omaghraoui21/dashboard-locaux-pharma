@@ -1,12 +1,12 @@
 # Dashboard des locaux d’activité — Supabase hybride v4
 
-Ce projet transforme le dashboard HTML local-first v3 en outil multi-postes et multi-utilisateurs, tout en conservant le cache `localStorage` et le fonctionnement hors-ligne.
+Ce projet fournit un dashboard HTML multi-postes et multi-utilisateurs protégé par Supabase Auth et RLS. Le cache `localStorage` assure la continuité d'une session déjà autorisée lors d'une coupure de synchronisation.
 
 Il s’agit d’un outil industriel de pilotage opérationnel. Il n’intègre aucune logique de conformité GxP, signature électronique ou audit trail réglementaire.
 
-## Démarrage rapide (local-first) — prêt atelier
+## Démarrage local avec Supabase
 
-Le paquet de production pointe déjà vers `trs-pharma`. Pour un fork sans cloud, passer explicitement `enabled` à `false`.
+Le paquet de production pointe déjà vers `trs-pharma`. Une session Supabase avec un profil `manager` ou `planner` est obligatoire pour afficher les données.
 
 ```bash
 cd dashboard_locaux_supabase_v4_package
@@ -32,13 +32,11 @@ Voir aussi `TOKENS_ET_DEPLOIEMENT.md` (ce qui est optionnel vs obligatoire).
 - **Import planning** : *Import CSV* (Excel → CSV UTF-8) avec relecture avant application
 - **Stock A26** : entrées/sorties qté théorique (manager + planificateur)
 - Clôture A23/A27 → activité stock A26 auto (corrigeable)
-- PIN Planificateur en local ; Supabase pour multi-postes
+- Rôles Manager et Planificateur fournis uniquement par Supabase
 
 Variables optionnelles : `PORT` (défaut `8765`), `HOST` (défaut `127.0.0.1`).
 
-Pour le multi-postes / multi-utilisateurs, suivre les sections Supabase ci-dessous (ne jamais activer `enabled: true` sans publishable key réelle).
-
-**Premier affichage :** si l’ancien demo « Local 1… » est encore en cache, vider la clé `localStorage` `pharma_ops_dashboard_v2` ou Restaurer une sauvegarde neuve.
+Pour le multi-postes / multi-utilisateurs, suivre les sections Supabase ci-dessous. La publishable key peut être publique ; ne jamais utiliser une clé `service_role` ou un jeton de gestion dans le navigateur.
 
 ## Fichiers
 
@@ -47,9 +45,6 @@ Pour le multi-postes / multi-utilisateurs, suivre les sections Supabase ci-desso
 - `supabase_schema.sql` : schéma PostgreSQL, contraintes, RLS et publication Realtime.
 - `serve.sh` : démarre le serveur HTTP local.
 - `smoke_check.sh` : validation déploiement local (HTTP + cohérence).
-- `MIGRATION_LOCALSTORAGE_V3.md` : migration des données du navigateur v3.
-- `supabase-config.example.js` : exemple de configuration séparée.
-- `.env.example` : noms de variables pour un déploiement avec bundler ou CI/CD.
 
 ## 1. Créer et préparer Supabase
 
@@ -147,21 +142,9 @@ Un hébergement HTTP(S) est recommandé. Les magic links nécessitent une URL de
    - Manager : lecture et mouvements de stock A26 ;
    - Planificateur : création, modification, clôture, paramètres et gestion des locaux.
 
-Le sélecteur local Manager/Planificateur est désactivé lorsqu’une session Supabase est active. Le PIN reste disponible uniquement comme solution de repli local lorsque le serveur n’est pas accessible ou pas configuré.
+Le rôle affiché est toujours fourni par Supabase. Aucun mode local ne contourne l'écran de connexion.
 
-## 6. Migration des données v3
-
-Suivre `MIGRATION_LOCALSTORAGE_V3.md`.
-
-Résumé :
-
-1. exporter une sauvegarde JSON v3 ;
-2. se connecter avec un compte Planificateur ;
-3. ouvrir **Connexion** ;
-4. cliquer sur **Migrer les données locales** ;
-5. vérifier les compteurs et corriger les éventuels chevauchements refusés par PostgreSQL.
-
-## 7. Fonctionnement de la synchronisation
+## 6. Fonctionnement de la synchronisation
 
 ### Écriture locale immédiate
 
@@ -193,7 +176,7 @@ La stratégie retenue est **dernière écriture reçue gagnante**. Le trigger Po
 
 La contrainte d’exclusion PostgreSQL reste prioritaire : deux activités non annulées ne peuvent pas se chevaucher dans le même local. Une opération refusée reste dans la file locale avec l’état « bloqué » jusqu’à correction.
 
-## 8. Données locales
+## 7. Données locales
 
 Clés utilisées :
 
@@ -205,7 +188,7 @@ pharma_ops_sync_meta_v4       état de première synchronisation
 
 L’export/import JSON, les exports CSV et PDF restent disponibles.
 
-## 9. Gestion des locaux
+## 8. Gestion des locaux
 
 Le profil Planificateur peut :
 
@@ -216,7 +199,7 @@ Le profil Planificateur peut :
 
 Un local désactivé reste présent dans l’historique mais ne peut plus être choisi pour une nouvelle activité.
 
-## 10. Contrôles après installation
+## 9. Contrôles après installation
 
 ### Vérifier les tables
 
@@ -240,10 +223,10 @@ Tester ensuite l’insertion de deux créneaux qui se recouvrent dans un même l
 
 - connexion Manager : lecture et stock A26 possibles, écriture planning refusée ;
 - connexion Planificateur : écriture possible ;
-- navigateur hors-ligne : cache consultable, modifications locales possibles en mode Planificateur de repli ;
-- retour en ligne : file envoyée après connexion Planificateur.
+- coupure après authentification : session conservée et file locale gardée jusqu'au retour de la synchronisation ;
+- rechargement sans vérification de profil possible : dashboard masqué et cache opérationnel purgé.
 
-## 11. Limites assumées
+## 10. Limites assumées
 
 - Le cache récupère actuellement l’ensemble des activités disponibles. Pour plusieurs années de données, ajouter une stratégie d’archivage ou une fenêtre de chargement.
 - La stratégie « dernière écriture reçue gagnante » est simple ; elle ne fusionne pas deux modifications concurrentes champ par champ.
