@@ -128,6 +128,29 @@
     };
   }
 
+  function stockAt(movements, instant = new Date()) {
+    const cutoff = new Date(instant).getTime();
+    if (!Number.isFinite(cutoff)) return [];
+    const balances = new Map();
+    (movements || []).forEach(movement => {
+      const at = new Date(movement.at).getTime();
+      const articleCode = String(movement.articleCode || '').trim().toUpperCase();
+      if (!articleCode || !Number.isFinite(at) || at > cutoff) return;
+      const batch = String(movement.batch || '—').trim() || '—';
+      const unit = String(movement.unit || 'u').trim() || 'u';
+      const key = JSON.stringify([articleCode, batch, unit]);
+      const row = balances.get(key) || { articleCode, batch, unit, qty: 0, futs: 0, lastAt: '' };
+      const sign = movement.sens === 'sortie' ? -1 : 1;
+      row.qty += sign * (Number(movement.qty) || 0);
+      row.futs += sign * (Number(movement.futs) || 0);
+      if (!row.lastAt || at >= new Date(row.lastAt).getTime()) row.lastAt = new Date(at).toISOString();
+      balances.set(key, row);
+    });
+    return [...balances.values()]
+      .map(row => ({ ...row, qty: Math.round(row.qty * 1e6) / 1e6, futs: Math.round(row.futs * 1e6) / 1e6 }))
+      .sort((a, b) => a.articleCode.localeCompare(b.articleCode) || a.batch.localeCompare(b.batch));
+  }
+
   function parseCsv(text) {
     const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return { headers: [], rows: [] };
@@ -201,6 +224,7 @@
     productLabel,
     nextLotNumber,
     storageHandoffFromComplete,
+    stockAt,
     parseCsv,
     toCsv,
     templateCsvRows

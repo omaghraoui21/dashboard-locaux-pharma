@@ -58,6 +58,15 @@
     }
   }
 
+  function clearLocalData() {
+    [CACHE_KEY, OUTBOX_KEY, META_KEY, 'pharma_rooms', 'pharma_history'].forEach(key => {
+      try { localStorage.removeItem(key); } catch (_) {}
+    });
+    runtime.baseline = null;
+    runtime.lastSyncAt = '';
+    adapter()?.clearLocalData?.();
+  }
+
   function resolveConfig() {
     const globalConfig = window.PHARMA_SUPABASE_CONFIG || {};
     const url = String(globalConfig.url || '').trim();
@@ -650,22 +659,37 @@
         await runtime.client.removeChannel(runtime.channel);
         runtime.channel = null;
       }
+      clearLocalData();
       publishContext();
       return;
     }
 
     try {
       runtime.profile = await loadProfile(session.user.id);
-      runtime.backendReachable = true;
-      if (getOutbox().some(item => item.userId == null)) setMeta({ migrationPending: true });
+      if (!['manager', 'planner'].includes(runtime.profile?.role)) throw new Error('Profil applicatif non autorisé.');
+    } catch (error) {
+      console.error('[PharmaSync] Vérification du profil impossible', error);
+      runtime.profile = null;
+      clearLocalData();
+      runtime.backendReachable = false;
       publishContext();
+      notify('Accès refusé ou profil impossible à vérifier. Rechargez la page pour réessayer.', 'bad');
+      return;
+    }
+
+    adapter()?.hydrateLocalData?.();
+    resetBaseline();
+    runtime.backendReachable = true;
+    if (getOutbox().some(item => item.userId == null)) setMeta({ migrationPending: true });
+    publishContext();
+    try {
       await subscribeRealtime();
       await syncNow();
     } catch (error) {
-      console.error('[PharmaSync] Initialisation de session impossible', error);
-      runtime.backendReachable = !isNetworkLikeError(error);
+      console.error('[PharmaSync] Synchronisation initiale impossible', error);
+      runtime.backendReachable = false;
       publishContext();
-      notify('Session conservée, mais le serveur est momentanément indisponible. Mode cache local actif.', 'bad');
+      notify('Session active, mais synchronisation indisponible. Les données locales sont conservées.', 'bad');
     }
   }
 
@@ -687,10 +711,14 @@
   }
 
   async function signOut() {
-    if (!runtime.client) return;
-    const { error } = await runtime.client.auth.signOut();
-    if (error) throw error;
-    await handleSession(null);
+    try {
+      if (runtime.client) {
+        const { error } = await runtime.client.auth.signOut({ scope: 'local' });
+        if (error) throw error;
+      }
+    } finally {
+      await handleSession(null);
+    }
   }
 
   async function performMigration() {
@@ -792,6 +820,7 @@
     });
 
     if (!runtime.enabled) {
+      clearLocalData();
       publishContext();
       return;
     }
@@ -802,8 +831,9 @@
       } catch (error) {
         console.error('[PharmaSync] Chargement de la bibliothèque impossible', error);
         runtime.enabled = false;
+        clearLocalData();
         publishContext({ libraryMissing: true });
-        notify('La bibliothèque Supabase n’a pas pu être chargée. Mode local actif.', 'bad');
+        notify('La connexion sécurisée n’a pas pu être chargée.', 'bad');
         return;
       }
     }
@@ -818,20 +848,26 @@
     if (runtime.config.schema && runtime.config.schema !== 'public') {
       clientOptions.db = { schema: runtime.config.schema };
     }
-    runtime.client = window.supabase.createClient(runtime.config.url, runtime.config.key, clientOptions);
+    try {
+      runtime.client = window.supabase.createClient(runtime.config.url, runtime.config.key, clientOptions);
 
-    const { data: { subscription } } = runtime.client.auth.onAuthStateChange((_event, session) => {
-      setTimeout(() => handleSession(session), 0);
-    });
-    runtime.authSubscription = subscription;
+      const { data: { subscription } } = runtime.client.auth.onAuthStateChange((_event, session) => {
+        setTimeout(() => handleSession(session), 0);
+      });
+      runtime.authSubscription = subscription;
 
-    const { data, error } = await runtime.client.auth.getSession();
-    if (error) {
-      console.warn('[PharmaSync] Session non disponible', error);
-      publishContext();
-      return;
+      const { data, error } = await runtime.client.auth.getSession();
+      if (error) throw error;
+      await handleSession(data.session);
+    } catch (error) {
+      console.warn('[PharmaSync] Initialisation sécurisée impossible', error);
+      runtime.session = null;
+      runtime.profile = null;
+      runtime.backendReachable = false;
+      clearLocalData();
+      publishContext({ initializationFailed: true });
+      notify('La connexion sécurisée est indisponible. Rechargez la page pour réessayer.', 'bad');
     }
-    await handleSession(data.session);
   }
 
   window.PharmaSync = {

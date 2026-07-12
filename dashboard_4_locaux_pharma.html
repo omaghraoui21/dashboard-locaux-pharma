@@ -25,6 +25,10 @@
   html,body{max-width:100%;overflow-x:hidden}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}
   .app{min-height:100vh;padding:18px}
+  .app[hidden],.login-gate[hidden]{display:none!important}
+  .login-gate{min-height:100vh;display:grid;place-items:center;padding:24px;background:#eef2f4}
+  .login-panel{width:min(430px,100%);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:24px;box-shadow:var(--shadow)}
+  .login-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}.login-mark{display:grid;place-items:center;width:46px;height:46px;border-radius:8px;background:var(--accent);color:#fff;font-weight:900}.login-brand h1{font-size:20px;margin:0}.login-brand p{font-size:12px;color:var(--muted);margin:3px 0 0}.login-panel .form-grid{grid-template-columns:1fr}.login-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}.login-actions button{flex:1}.login-access-note{margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);text-align:center}
   .topbar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:16px}
   .brand h1{font-size:24px;margin:0 0 4px}.brand p{margin:0;color:var(--muted);font-size:13px}
   .top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
@@ -41,9 +45,10 @@
   .filters{display:flex;gap:10px;flex-wrap:wrap;background:var(--panel);padding:12px;border-radius:14px;box-shadow:var(--shadow);margin-bottom:16px}
   .filters label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:5px;min-width:150px}
   select,input,textarea{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;color:var(--ink)}
-  input:invalid,select:invalid{border-color:var(--bad)}
+  input:user-invalid,select:user-invalid{border-color:var(--bad)}
   .kpi-context{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 2px 8px;color:var(--muted);font-size:12px}
-  .kpis{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+  .kpis{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+  .kpis.direct-kpis{grid-template-columns:repeat(3,minmax(140px,1fr))}.kpis.direct-kpis .kpi{padding:11px 14px}.kpis.direct-kpis .value{font-size:23px;margin-top:3px}
   .kpi{background:var(--panel);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border-left:5px solid var(--info)}
   .kpi.ok{border-left-color:var(--ok)}.kpi.warn{border-left-color:var(--warn)}.kpi.bad{border-left-color:var(--bad)}
   .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
@@ -70,6 +75,8 @@
   .next-activity{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted)}
   .next-activity strong{color:var(--ink)}
   .lower{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;min-width:0}.monthly-lower{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin-top:14px;min-width:0}
+  .realtime-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(340px,1fr);gap:14px;align-items:start;margin-bottom:16px}.realtime-layout .room-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:0}.realtime-layout .room{padding:13px}.realtime-layout .room-title h3{font-size:16px}.realtime-layout .activity-name{font-size:15px}.realtime-layout .meta{gap:5px}.realtime-layout .meta div{padding:7px}.realtime-layout .room-head{margin-bottom:10px}
+  .stock-panel{position:sticky;top:12px}.stock-panel h3{font-size:12px;text-transform:uppercase;color:var(--muted);margin:14px 0 7px}.stock-controls{display:grid;gap:7px}.stock-controls label{display:grid;gap:4px;font-size:11px;color:var(--muted)}.stock-controls input{width:100%}.stock-actions{display:flex;gap:6px;flex-wrap:wrap}.stock-actions button{flex:1;padding:7px 8px;font-size:11px}.stock-reference{font-size:11px;color:var(--muted);margin-top:3px}.stock-reference.historical{color:#95600a;font-weight:800}.stock-section+.stock-section{border-top:1px solid var(--line);margin-top:12px;padding-top:1px}.stock-panel .table-wrap{max-height:245px;border-radius:8px}.stock-panel table{font-size:10px}.stock-panel th,.stock-panel td{padding:7px 5px}.stock-balance{font-weight:900;white-space:nowrap}.stock-negative{color:var(--bad)}.movement-in{color:var(--ok);font-weight:900}.movement-out{color:#a15f09;font-weight:900}
   .panel{background:var(--panel);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);min-width:0}.panel h2{font-size:16px;margin:0 0 12px}.panel-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}.panel-head h2{margin:0}
   .chart{height:210px;display:flex;align-items:flex-end;gap:8px;padding:18px 6px 24px;border-bottom:1px solid var(--line);position:relative;overflow-x:auto}
   .bar-wrap{height:100%;min-width:42px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}.bar{width:70%;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#4aa0be,#2e6a84);position:relative;min-height:4px}.bar.no-data{background:#dfe7eb}
@@ -81,6 +88,7 @@
   .pareto{display:grid;gap:11px}.pareto-row{display:grid;grid-template-columns:150px 1fr 35px;gap:10px;align-items:center;font-size:12px}.pareto-track{height:12px;background:#edf1f3;border-radius:999px;overflow:hidden}.pareto-fill{height:100%;background:linear-gradient(90deg,#d9911b,#efb64f);border-radius:999px}.empty-state{text-align:center;color:var(--muted);padding:28px 10px;font-size:13px}
   dialog{border:0;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.25);padding:0;max-width:760px;width:calc(100% - 28px)}dialog::backdrop{background:rgba(16,30,38,.45)}
   .modal{padding:18px}.modal h2{margin:0 0 14px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid .full{grid-column:1/-1}.form-grid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}.modal-actions{display:flex;justify-content:space-between;gap:9px;margin-top:16px;flex-wrap:wrap}.modal-actions-right{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap}.form-error{display:none;margin-top:12px;padding:10px;border-radius:9px;background:#fdeaea;color:#9d2f2f;font-size:12px;font-weight:700}.form-error.show{display:block}
+  .form-error.ok{background:#e7f6ef;color:#176f54}
   .toast{position:fixed;right:18px;bottom:18px;max-width:380px;padding:12px 14px;border-radius:12px;background:var(--accent);color:#fff;box-shadow:0 12px 30px rgba(0,0,0,.22);font-size:13px;font-weight:700;opacity:0;pointer-events:none;transform:translateY(12px);transition:.2s;z-index:100}.toast.show{opacity:1;transform:translateY(0)}.toast.bad{background:#9d2f2f}.toast.ok{background:#137054}
   .footer-note{margin-top:14px;color:var(--muted);font-size:11px;text-align:right}.view-section[hidden]{display:none!important}.planner-only[hidden]{display:none!important}.filter-month[hidden],.filter-date[hidden]{display:none!important}
   #printReport{display:none}
@@ -95,18 +103,40 @@
   .badge.occ-disponible{background:#eef5f9;color:#315d72}.badge.occ-en_production{background:#e7f0ff;color:#244f8a}
   .hint-inline{font-size:10px;color:var(--muted);font-weight:600;margin-top:2px}
   .toolbar-separator{width:1px;height:30px;background:var(--line)}
+  .action-menu{position:relative}.action-menu summary{list-style:none;background:#e8eff2;color:var(--accent);border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;white-space:nowrap}.action-menu summary::-webkit-details-marker{display:none}.action-menu summary::after{content:' ▾'}.action-menu[open] summary::after{content:' ▴'}.action-menu-popover{position:absolute;right:0;top:calc(100% + 6px);z-index:30;display:grid;gap:4px;min-width:235px;padding:7px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}.action-menu-popover button{width:100%;text-align:left;padding:9px 10px}
   .journal-panel{padding:0;overflow:hidden}.journal-panel summary{cursor:pointer;padding:16px;font-weight:800;list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center}.journal-panel summary::-webkit-details-marker{display:none}.journal-panel summary::after{content:"＋";font-size:18px;color:var(--muted)}.journal-panel[open] summary::after{content:"−"}.journal-content{padding:0 16px 16px}
   .settings-section{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}.settings-section h3{font-size:14px;margin:0 0 10px}.checkbox-row{display:flex!important;flex-direction:row!important;align-items:center;gap:8px!important}.checkbox-row input{width:auto}.storage-track{height:10px;background:#edf1f3;border-radius:999px;overflow:hidden;margin:8px 0}.storage-fill{height:100%;background:linear-gradient(90deg,#2e6a84,#4aa0be);border-radius:999px}.hint{font-size:11px;color:var(--muted);line-height:1.45}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.detail-grid>div{background:#f7f9fa;border:1px solid #edf1f3;padding:10px;border-radius:10px}.detail-grid .full{grid-column:1/-1}.detail-grid span{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}.detail-grid strong{font-size:13px;word-break:break-word}.detail-list{display:grid;gap:8px;max-height:430px;overflow:auto}.detail-list-item{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;background:#f7f9fa;color:var(--ink);border:1px solid var(--line);padding:10px}.detail-list-item span{font-size:12px;color:var(--muted);margin-top:3px}.modal.compact{max-width:520px}.activity-chip{width:100%;border:0;text-align:left;font-weight:600}.more-chip{border:0;background:transparent;padding:4px 2px;cursor:pointer;text-align:left}.more-chip:hover{text-decoration:underline;transform:none}.timezone-line{margin-top:8px;color:var(--muted);font-size:11px}.danger-zone{border-color:#f2caca;background:#fffafa}.top-actions .btn-soft,.top-actions .btn-primary{white-space:nowrap}
-  @media(max-width:1150px){.kpis{grid-template-columns:repeat(3,1fr)}.lower,.monthly-lower{grid-template-columns:1fr}.room-grid{grid-template-columns:1fr}.calendar{grid-template-columns:repeat(7,minmax(105px,1fr))}}
-  @media(max-width:760px){.app{padding:10px}.topbar{align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start;width:100%}.kpis{grid-template-columns:repeat(2,1fr)}.meta{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:1}.filters label{min-width:100%}.clock{width:100%}.tabs{width:100%}.tab{flex:1}.calendar{display:block;border:0}.calendar-head{display:none}.calendar-day{min-height:auto;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}.calendar-day.outside{display:none}.pareto-row{grid-template-columns:110px 1fr 30px}.detail-grid{grid-template-columns:1fr}.detail-grid .full{grid-column:1}.saved-status{width:100%;text-align:center}.toolbar-separator{display:none}.connection-status{width:100%;text-align:center}.room-admin-row{grid-template-columns:1fr}}
-  @media(max-width:480px){.kpis{grid-template-columns:1fr}.top-actions>*{width:100%}.role-box{justify-content:space-between}.mini-actions{width:100%}.mini-actions button{flex:1}}
+  @media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.lower,.monthly-lower,.realtime-layout{grid-template-columns:1fr}.realtime-layout .room-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.stock-panel{position:static}.calendar{grid-template-columns:repeat(7,minmax(105px,1fr))}}
+  @media(max-width:900px){.realtime-layout .room-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:760px){.app{padding:10px}.topbar{align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start;width:100%}.kpis{grid-template-columns:repeat(2,1fr)}.kpis.direct-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.realtime-layout .room-grid{grid-template-columns:1fr}.meta{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:1}.filters label{min-width:calc(50% - 5px);flex:1}.filters label:last-child{flex-basis:100%}.clock{display:none}.tabs{width:100%}.tab{flex:1}.calendar{display:block;border:0}.calendar-head{display:none}.calendar-day{min-height:auto;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}.calendar-day.outside{display:none}.pareto-row{grid-template-columns:110px 1fr 30px}.detail-grid{grid-template-columns:1fr}.detail-grid .full{grid-column:1}.toolbar-separator{display:none}.connection-status{width:100%;text-align:center}.room-admin-row{grid-template-columns:1fr}.action-menu-popover{left:auto;right:0}}
+  @media(max-width:480px){.top-actions>*{width:auto}.role-box,.connection-status{width:100%}.role-box{justify-content:space-between}.saved-status{display:none}.top-actions button,.action-menu summary{padding:8px 10px;font-size:12px}.kpis.direct-kpis .kpi{padding:8px}.kpis.direct-kpis .label{font-size:9px}.kpis.direct-kpis .value{font-size:20px}.kpis.direct-kpis .sub{font-size:9px}.mini-actions{width:100%}.mini-actions button{flex:1}}
   @media print{
     body{background:#fff}.app,.toast,dialog{display:none!important}#printReport{display:block!important;color:#111;font-family:Arial,sans-serif;padding:10mm}#printReport h1{font-size:22px;margin:0 0 4px}#printReport h2{font-size:15px;margin:18px 0 8px}#printReport p{font-size:11px;margin:2px 0}.print-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0}.print-kpi{border:1px solid #bbb;padding:8px;border-radius:6px}.print-kpi b{display:block;font-size:18px}.print-kpi span{font-size:9px;color:#555}.print-table{width:100%;font-size:9px;border-collapse:collapse}.print-table th,.print-table td{border:1px solid #bbb;padding:5px}.print-table th{background:#eee}.print-table thead{display:table-header-group}.print-table tr{break-inside:avoid;page-break-inside:avoid}.print-note{font-size:9px;color:#555;margin-top:10px}
   }
 </style>
 </head>
 <body>
-<div class="app">
+<div class="login-gate" id="loginGate">
+  <div class="login-panel" role="region" aria-labelledby="loginTitle">
+    <div class="login-brand">
+      <span class="login-mark" aria-hidden="true">TRS</span>
+      <div><h1 id="loginTitle">Dashboard des locaux</h1><p>Accès opérationnel sécurisé</p></div>
+    </div>
+    <form onsubmit="loginSupabase(event)" novalidate>
+      <div class="form-grid">
+        <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" required /></label>
+        <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password" /></label>
+      </div>
+      <div id="authError" class="form-error" role="alert" aria-live="assertive"></div>
+      <div class="login-actions">
+        <button class="btn-soft" type="button" onclick="sendMagicLinkSupabase()">Recevoir un magic link</button>
+        <button class="btn-primary" type="submit">Se connecter</button>
+      </div>
+    </form>
+    <p class="login-access-note">Accès réservé aux comptes autorisés.</p>
+  </div>
+</div>
+<div class="app" id="dashboardApp" hidden>
   <div class="topbar">
     <div class="brand">
       <h1>Dashboard des locaux d’activité</h1>
@@ -128,16 +158,27 @@
       <button class="btn-soft" id="syncNowBtn" onclick="requestSyncNow()" aria-label="Synchroniser maintenant">Synchroniser</button>
       <button class="btn-soft" id="logoutBtn" onclick="logoutSupabase()" hidden aria-label="Se déconnecter de Supabase">Déconnexion</button>
       <div class="toolbar-separator" aria-hidden="true"></div>
-      <button class="btn-soft" onclick="exportJSON()" aria-label="Exporter une sauvegarde complète au format JSON">Sauvegarde JSON</button>
-      <button class="btn-soft planner-only" onclick="triggerImportJSON()" aria-label="Restaurer une sauvegarde JSON">Restaurer JSON</button>
+      <details class="action-menu">
+        <summary>Exporter</summary>
+        <div class="action-menu-popover">
+          <button class="btn-soft" onclick="exportAllCSV()" aria-label="Exporter toutes les données au format CSV">Toutes les données (CSV)</button>
+          <button class="btn-soft" onclick="exportJSON()" aria-label="Exporter une sauvegarde complète au format JSON">Sauvegarde complète (JSON)</button>
+          <button class="btn-soft" onclick="exportMonthlyCSV()">Activités du mois (CSV)</button>
+          <button class="btn-soft" onclick="exportStockCSV()">Mouvements A26 (CSV)</button>
+          <button class="btn-soft" onclick="exportMonthlyPDF()">Rapport mensuel (PDF)</button>
+        </div>
+      </details>
+      <details class="action-menu planner-only">
+        <summary>Outils</summary>
+        <div class="action-menu-popover">
+          <button class="btn-soft planner-only" onclick="triggerImportJSON()" aria-label="Restaurer une sauvegarde JSON">Restaurer JSON</button>
+          <button class="btn-soft planner-only" onclick="openSettings()" aria-label="Ouvrir les paramètres de capacité et de stockage">Paramètres</button>
+          <button class="btn-soft planner-only" onclick="openRoomsManager()" aria-label="Gérer les locaux">Locaux</button>
+          <button class="btn-soft planner-only" onclick="openArticlesManager()" aria-label="Programmer les articles FSF PF">Articles</button>
+          <button class="btn-soft planner-only" onclick="openCsvImport()" aria-label="Importer un planning CSV Excel">Import CSV</button>
+        </div>
+      </details>
       <input type="file" id="jsonImportInput" accept="application/json,.json" hidden onchange="importJSONFile(this)" />
-      <button class="btn-soft planner-only" onclick="openSettings()" aria-label="Ouvrir les paramètres de capacité et de stockage">Paramètres</button>
-      <button class="btn-soft planner-only" onclick="openRoomsManager()" aria-label="Gérer les locaux">Locaux</button>
-      <button class="btn-soft planner-only" onclick="openArticlesManager()" aria-label="Programmer les articles FSF PF">Articles</button>
-      <button class="btn-soft planner-only" onclick="openCsvImport()" aria-label="Importer un planning CSV Excel">Import CSV</button>
-      <button class="btn-soft" id="stockBtn" onclick="openStockDialog()" aria-label="Mouvements stock A26">Stock A26</button>
-      <button class="btn-soft" onclick="exportMonthlyCSV()">Rapport mensuel CSV</button>
-      <button class="btn-soft" onclick="exportMonthlyPDF()">Rapport mensuel PDF</button>
       <button class="btn-primary planner-only" id="newActivityBtn" onclick="openCreateActivity()">Nouvelle activité</button>
     </div>
   </div>
@@ -182,7 +223,46 @@
   <div class="kpis" id="kpis"></div>
 
   <section id="realtimeView" class="view-section" role="tabpanel" aria-labelledby="realtimeTab">
-    <div class="room-grid" id="rooms"></div>
+    <div class="realtime-layout">
+      <div class="room-grid" id="rooms"></div>
+      <aside class="panel stock-panel" aria-labelledby="stockOverviewTitle">
+        <div class="panel-head">
+          <div>
+            <h2 id="stockOverviewTitle">A26 · Stock disponible</h2>
+            <div class="stock-reference" id="stockReferenceLabel"></div>
+          </div>
+        </div>
+        <div class="stock-controls">
+          <label for="stockAtFilter">Stock théorique à l'instant
+            <input id="stockAtFilter" type="datetime-local" onchange="renderStockOverview()" />
+          </label>
+          <div class="stock-actions">
+            <button class="btn-soft" type="button" onclick="resetStockReference()">Maintenant</button>
+            <button class="btn-primary" type="button" onclick="openStockDialog()">Saisir E/S</button>
+            <button class="btn-soft" type="button" onclick="exportStockCSV()">Exporter CSV</button>
+          </div>
+        </div>
+        <div class="stock-section">
+          <h3>Disponible par article et lot</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Article / lot</th><th>Qté</th><th>Fûts</th><th>Dernier mvt</th></tr></thead>
+              <tbody id="stockSummaryBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="stock-section">
+          <h3>Dernières entrées / sorties</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Heure</th><th>E/S</th><th>Article / lot</th><th>Qté</th></tr></thead>
+              <tbody id="stockRecentBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="hint">Solde calculé depuis les mouvements E/S saisis. Une activité A26 ne modifie pas automatiquement les quantités.</p>
+      </aside>
+    </div>
     <div class="lower">
       <div class="panel">
         <h2>Respect du planning — 7 derniers jours</h2>
@@ -399,30 +479,6 @@
   </div>
 </dialog>
 
-<dialog id="authDialog" aria-labelledby="authTitle">
-  <form class="modal compact" onsubmit="loginSupabase(event)" novalidate>
-    <h2 id="authTitle">Connexion multi-utilisateurs</h2>
-    <div class="auth-summary" id="authSummary"><strong>Mode local</strong><span class="hint">Supabase n’est pas encore connecté.</span></div>
-    <div class="form-grid">
-      <label class="full">Adresse e-mail<input id="authEmail" type="email" autocomplete="username" required placeholder="prenom.nom@entreprise.tn" /></label>
-      <label class="full">Mot de passe<input id="authPassword" type="password" autocomplete="current-password" placeholder="Mot de passe Supabase" /></label>
-    </div>
-    <div id="authError" class="form-error" role="alert" aria-live="assertive"></div>
-    <div class="settings-section">
-      <h3>Synchronisation</h3>
-      <p class="hint" id="authSyncInfo">Les données restent utilisables localement lorsque le serveur est indisponible.</p>
-      <div class="mini-actions">
-        <button class="btn-soft" id="migrateLocalBtn" type="button" onclick="migrateLocalToSupabase()">Migrer les données locales</button>
-        <button class="btn-soft" id="retrySyncBtn" type="button" onclick="retrySyncQueue()">Réessayer les éléments bloqués</button>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-soft" type="button" onclick="sendMagicLinkSupabase()">Envoyer un magic link</button>
-      <div class="modal-actions-right"><button class="btn-soft" type="button" onclick="closeDialog(document.getElementById('authDialog'))">Fermer</button><button class="btn-primary" type="submit">Se connecter</button></div>
-    </div>
-  </form>
-</dialog>
-
 <dialog id="roomsDialog" aria-labelledby="roomsTitle">
   <div class="modal">
     <h2 id="roomsTitle">Gestion des locaux</h2>
@@ -455,6 +511,7 @@
         <select id="mArticle" required></select>
       </label>
       <label>Lot<input id="mBatch" maxlength="50" placeholder="ex. 26001" /></label>
+      <label>Date / heure effective<input id="mAt" type="datetime-local" required /></label>
       <label>Qté théorique<input id="mQty" type="number" min="0" step="any" required /></label>
       <label>Unité<input id="mUnit" maxlength="20" /></label>
       <label>Nb fûts<input id="mFuts" type="number" min="0" max="20" step="1" value="0" /></label>
@@ -660,8 +717,8 @@ let lastFocusedElement = null;
 let pinDialogMode = 'unlock';
 let plannerUnlocked = false;
 try { plannerUnlocked = sessionStorage.getItem('pharma_planner_unlocked') === '1'; } catch (_) {}
-let state; state = loadState();
-if (!plannerUnlocked) state.profile = 'manager';
+let state = buildSeedState();
+state.profile = 'manager';
 
 function pad(value){ return String(value).padStart(2,'0'); }
 function localDateTimeValue(date){
@@ -1168,6 +1225,24 @@ function shiftMonth(delta){
 }
 
 function renderKPIs(){
+  const container=document.getElementById('kpis');
+  if(currentView==='realtime'){
+    const now=new Date();
+    const active=state.activities.filter(activity=>['running','paused'].includes(activity.status));
+    const busyRooms=new Set(active.map(activity=>Number(activity.roomId)));
+    const attention=active.filter(activity=>activity.status==='paused'||hasDelay(activity,now)).length;
+    const available=Math.max(0,activeRooms().length-busyRooms.size);
+    document.getElementById('kpiContext').textContent='Situation opérationnelle actuelle';
+    document.getElementById('capacityContext').textContent=`Dernière lecture : ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`;
+    container.classList.add('direct-kpis');
+    const cards=[
+      ['En production',busyRooms.size,`${active.length} activité(s) en cours`,busyRooms.size?'ok':''],
+      ['À surveiller',attention,'pause, retard ou blocage',attention?'warn':'ok'],
+      ['Locaux disponibles',available,`sur ${activeRooms().length} locaux actifs`,available?'':'warn']
+    ];
+    container.innerHTML=cards.map(card=>`<div class="kpi ${card[3]}"><div class="label">${card[0]}</div><div class="value">${card[1]}</div><div class="sub">${card[2]}</div></div>`).join('');
+    return;
+  }
   const metrics=monthlyMetrics();
   document.getElementById('kpiContext').textContent=`Indicateurs de ${fmtMonth(state.selectedMonth)}`;
   document.getElementById('capacityContext').textContent=`Capacité : ${capacityDescription()} · ${Math.round(metrics.capacityHours)} h disponibles sur ${activeRooms().length} local(aux) actif(s).`;
@@ -1180,7 +1255,8 @@ function renderKPIs(){
     ['Avancement moyen',`${metrics.avg}%`,'activités du mois',metrics.avg>=75?'ok':metrics.avg>=45?'warn':''],
     ['Réalisées / planifiées',`${metrics.complete} / ${metrics.planned}`,`${realizedRate}% réalisées`,realizedRate>=80?'ok':realizedRate>=50?'warn':'']
   ];
-  document.getElementById('kpis').innerHTML=cards.map(card=>`<div class="kpi ${card[3]}"><div class="label">${card[0]}</div><div class="value">${card[1]}</div><div class="sub">${card[2]}</div></div>`).join('');
+  container.classList.remove('direct-kpis');
+  container.innerHTML=cards.map(card=>`<div class="kpi ${card[3]}"><div class="label">${card[0]}</div><div class="value">${card[1]}</div><div class="sub">${card[2]}</div></div>`).join('');
 }
 
 function roomMatchesFilters(room,activity,reference){
@@ -1388,7 +1464,7 @@ function renderChangeLog(){
 function renderAll(){
   renderKPIs();
   if(currentView==='realtime'){
-    renderRooms();renderPlanningChart();renderTimeline();
+    renderRooms();renderStockOverview();renderPlanningChart();renderTimeline();
   }else{
     renderMonthlyCalendar();renderMonthlyPerformance();renderPareto();renderLocalSummary();
   }
@@ -1717,7 +1793,7 @@ function exportJSON(){
   try{
     const payload={application:'Dashboard 4 locaux d’activité',formatVersion:4,exportedAt:new Date().toISOString(),timezone:timezoneLabel(),data:state};
     downloadBlob(JSON.stringify(payload,null,2),'application/json;charset=utf-8',`sauvegarde_dashboard_locaux_${localDateValue(new Date())}.json`);
-    showToast('Sauvegarde JSON exportée.','ok');
+    showToast('Toutes les données ont été exportées en JSON.','ok');
   }catch(error){console.error(error);showToast('Export JSON impossible.','bad');}
 }
 function triggerImportJSON(){
@@ -1749,6 +1825,30 @@ function applyImportedState(){
 function csvEscape(value){
   const raw=String(value??''),safe=/^\s*[=+\-@]/.test(raw)?`'${raw}`:raw;
   return `"${safe.replaceAll('"','""')}"`;
+}
+function exportAllCSV(){
+  const rows=[['Export complet du dashboard des locaux'],['Date export',new Date().toISOString()],['Fuseau',timezoneLabel()],[]];
+  const section=(title,headers,data)=>rows.push([title],headers,...data,[]);
+  section('LOCAUX',['ID','Code','Nom','Zone','Type','Hygiène','Actif'],state.rooms.map(room=>[room.id,room.code,room.name,room.zone,room.kind,room.hygiene,room.isActive!==false]));
+  section('ACTIVITÉS',['ID','Local','Activité','Produit','Lot','Équipe','Responsable','Début planifié','Fin planifiée','Début réel','Fin réelle','Avancement','Statut','Étape','Retard / blocage','Commentaire'],state.activities.map(activity=>[activity.id,getRoom(activity.roomId)?.code||activity.roomId,activity.activity,activity.product,activity.batch,activity.team,activity.owner,activity.planStart,activity.planEnd,activity.actualStart,activity.actualEnd,activity.progress,activity.status,activity.step,activity.delayCategory,activity.comment]));
+  section('ARTICLES',['Code','Libellé','Famille','Unité','Qté par défaut','Fûts par défaut','Actif'],getArticles().map(article=>[article.code,article.label,article.family,article.unit,article.defaultQty,article.defaultFuts,article.active!==false]));
+  section('MOUVEMENTS A26',['Date / heure','Sens','Article','Lot','Quantité','Unité','Fûts','Origine / Destination','Commentaire','Par'],getMovements().slice().sort((a,b)=>new Date(a.at)-new Date(b.at)).map(movement=>[movement.at,movement.sens,movement.articleCode,movement.batch,movement.qty,movement.unit,movement.futs,movement.place,movement.comment,movement.by]));
+  section('PARAMÈTRES',['Clé','Valeur'],Object.entries(state.settings).map(([key,value])=>[key,value]));
+  section('JOURNAL',['Date / heure','Action','Détail'],state.changeLog.map(log=>[log.timestamp,log.action,log.detail]));
+  try{
+    downloadBlob('\ufeff'+rows.map(row=>row.map(csvEscape).join(';')).join('\n'),'text/csv;charset=utf-8',`export_complet_dashboard_locaux_${localDateValue(new Date())}.csv`);
+    showToast('Toutes les données ont été exportées en CSV.','ok');
+  }catch(error){console.error(error);showToast('Export CSV complet impossible.','bad');}
+}
+function exportStockCSV(){
+  const rows=[['Date / heure','Sens','Article','Libellé','Lot','Quantité','Unité','Fûts','Origine / Destination','Commentaire','Par']];
+  getMovements().slice().sort((a,b)=>new Date(a.at)-new Date(b.at)).forEach(movement=>{
+    rows.push([movement.at,movement.sens,movement.articleCode,getArticle(movement.articleCode)?.label||'',movement.batch,movement.qty,movement.unit,movement.futs,movement.place,movement.comment,movement.by]);
+  });
+  try{
+    downloadBlob('\ufeff'+rows.map(row=>row.map(csvEscape).join(';')).join('\n'),'text/csv;charset=utf-8',`mouvements_A26_${localDateValue(new Date())}.csv`);
+    showToast('Mouvements A26 exportés en CSV.','ok');
+  }catch(error){console.error(error);showToast('Export stock CSV impossible.','bad');}
 }
 function exportMonthlyCSV(){
   const metrics=monthlyMetrics();
@@ -1952,7 +2052,7 @@ applyProfile=function(){
 function renderConnectionStatus(){
   const element=document.getElementById('connectionStatus');
   if(!element) return;
-  let cls='offline',text='Mode local';
+  let cls='offline',text='Accès sécurisé indisponible';
   if(syncContext.enabled){
     if(syncContext.syncing){cls='online';text='Synchronisation…';}
     else if(!syncContext.backendReachable){cls='offline';text=`Hors ligne${syncContext.pendingCount?` · ${syncContext.pendingCount} en attente`:''}`;}
@@ -1967,23 +2067,19 @@ function renderConnectionStatus(){
   if(logout) logout.hidden=!syncContext.authenticated;
   const syncButton=document.getElementById('syncNowBtn');
   if(syncButton) syncButton.disabled=!syncContext.enabled||syncContext.syncing;
-  renderAuthSummary();
+  applyAuthGate();
 }
-function renderAuthSummary(){
-  const summary=document.getElementById('authSummary'),info=document.getElementById('authSyncInfo');
-  if(summary){
-    summary.innerHTML=syncContext.authenticated
-      ?`<strong>${escapeHTML(syncContext.user?.email||syncContext.displayName||'Utilisateur connecté')}</strong><span class="hint">Rôle : ${syncContext.role==='planner'?'Planificateur':'Manager'} · ${syncContext.backendReachable?'serveur accessible':'mode hors-ligne'}</span>`
-      :`<strong>${syncContext.enabled?'Aucun utilisateur connecté':'Mode local'}</strong><span class="hint">${syncContext.enabled?'Connectez-vous par mot de passe ou magic link.':'Renseignez la configuration Supabase dans le fichier HTML.'}</span>`;
-  }
-  if(info) info.textContent=`File locale : ${syncContext.pendingCount||0} opération(s), dont ${syncContext.blockedCount||0} bloquée(s). Dernière synchronisation : ${syncContext.lastSyncAt?new Date(syncContext.lastSyncAt).toLocaleString('fr-FR'):'—'}.`;
-  const migrate=document.getElementById('migrateLocalBtn');if(migrate)migrate.disabled=!syncContext.authenticated;
-  const retry=document.getElementById('retrySyncBtn');if(retry)retry.disabled=!syncContext.blockedCount;
+function applyAuthGate(){
+  const allowed=syncContext.authenticated&&['manager','planner'].includes(syncContext.role);
+  const gate=document.getElementById('loginGate'),app=document.getElementById('dashboardApp');
+  gate.hidden=allowed;app.hidden=!allowed;
+  if(!allowed&&document.activeElement!==document.getElementById('authEmail')) setTimeout(()=>document.getElementById('authEmail')?.focus(),0);
 }
-
 function openAuthDialog(){
-  document.getElementById('authError').className='form-error';renderAuthSummary();
-  openDialog(document.getElementById('authDialog'),'#authEmail');
+  document.getElementById('authError').className='form-error';
+  document.getElementById('loginGate').hidden=false;
+  document.getElementById('dashboardApp').hidden=true;
+  setTimeout(()=>document.getElementById('authEmail').focus(),0);
 }
 function showAuthError(message){const box=document.getElementById('authError');box.textContent=message;box.className='form-error show';}
 async function loginSupabase(event){
@@ -1992,28 +2088,27 @@ async function loginSupabase(event){
     const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;
     if(!email||!password) throw new Error('Saisissez l’adresse e-mail et le mot de passe.');
     await window.PharmaSync.signInWithPassword(email,password);
-    closeDialog(document.getElementById('authDialog'));showToast('Connexion Supabase réussie.','ok');
+    document.getElementById('authPassword').value='';
   }catch(error){showAuthError(error.message||'Connexion impossible.');}
 }
 async function sendMagicLinkSupabase(){
   try{
     const email=document.getElementById('authEmail').value.trim();if(!email)throw new Error('Saisissez une adresse e-mail.');
-    await window.PharmaSync.sendMagicLink(email);showToast('Magic link envoyé. Consultez votre messagerie.','ok');
+    await window.PharmaSync.sendMagicLink(email);
+    const box=document.getElementById('authError');box.textContent='Magic link envoyé. Consultez votre messagerie.';box.className='form-error show ok';
   }catch(error){showAuthError(error.message||'Envoi impossible.');}
 }
 async function logoutSupabase(){
-  try{await window.PharmaSync?.signOut();state.profile='manager';safePersist(state,{skipSync:true});applyProfile();renderAll();showToast('Déconnexion effectuée.','ok');}
+  try{
+    if(syncContext.pendingCount){
+      try{await window.PharmaSync?.syncNow();}catch(_){}
+      if(window.PharmaSync?.getContext().pendingCount&&!confirm('Des modifications non synchronisées seront supprimées. Se déconnecter quand même ?'))return;
+    }
+    await window.PharmaSync?.signOut();
+  }
   catch(error){showToast(error.message||'Déconnexion impossible.','bad');}
 }
 async function requestSyncNow(){try{await window.PharmaSync?.syncNow();}catch(error){showToast(error.message||'Synchronisation impossible.','bad');}}
-async function migrateLocalToSupabase(){
-  const scope=syncContext.role==='planner'?'le planning, les articles et le stock':'les mouvements de stock uniquement';
-  openConfirm({title:'Migrer les données locales',message:`Envoyer ${scope} présents dans ce navigateur vers Supabase ? Les contraintes serveur resteront appliquées.`,confirmText:'Migrer',onConfirm:async()=>{
-    try{const result=await window.PharmaSync.migrateLocalData();showToast(`Migration terminée : ${result.activities} activité(s), ${result.movements} mouvement(s).`,'ok');}
-    catch(error){showToast(error.message||'Migration incomplète.','bad');}
-  }});
-}
-function retrySyncQueue(){window.PharmaSync?.retryBlockedItems();showToast('Nouvelle tentative de synchronisation lancée.','ok');}
 
 function renderRoomAdminList(){
   const container=document.getElementById('roomAdminList');
@@ -2061,10 +2156,49 @@ function requestDeleteRoom(id){
 /* ——— Stock A26 / Articles / CSV planning ——— */
 let csvPreviewRows=null;
 
+function stockReferenceTime(){
+  const raw=document.getElementById('stockAtFilter')?.value||'';
+  const reference=raw?new Date(raw):new Date();
+  return Number.isNaN(reference.getTime())?new Date():reference;
+}
+function resetStockReference(){
+  document.getElementById('stockAtFilter').value='';
+  renderStockOverview();
+}
+function renderStockOverview(){
+  const summary=document.getElementById('stockSummaryBody'),recent=document.getElementById('stockRecentBody');
+  if(!summary||!recent)return;
+  const raw=document.getElementById('stockAtFilter').value;
+  const reference=stockReferenceTime();
+  const label=document.getElementById('stockReferenceLabel');
+  label.textContent=raw?`Historique au ${fmtDateTime(reference)}`:`Maintenant · ${fmtDateTime(reference)}`;
+  label.classList.toggle('historical',Boolean(raw));
+  const balances=(PD()?.stockAt(getMovements(),reference)||[]).filter(row=>Math.abs(row.qty)>1e-9||Math.abs(row.futs)>1e-9);
+  summary.innerHTML=balances.length?balances.map(row=>{
+    const article=getArticle(row.articleCode),negative=row.qty<0||row.futs<0;
+    return `<tr>
+      <td><strong>${escapeHTML(row.articleCode)}</strong>${article?` · ${escapeHTML(article.label)}`:''}<br><span class="hint">lot ${escapeHTML(row.batch)}</span></td>
+      <td class="stock-balance ${negative?'stock-negative':''}">${Number(row.qty).toLocaleString('fr-FR',{maximumFractionDigits:3})}<br>${escapeHTML(row.unit)}</td>
+      <td class="stock-balance ${row.futs<0?'stock-negative':''}">${Number(row.futs).toLocaleString('fr-FR',{maximumFractionDigits:3})}</td>
+      <td>${fmtDateTime(row.lastAt)}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="4">Aucun stock disponible à cet instant.</td></tr>';
+  const movements=getMovements().filter(movement=>new Date(movement.at)<=reference).sort((a,b)=>new Date(b.at)-new Date(a.at)).slice(0,20);
+  recent.innerHTML=movements.length?movements.map(movement=>`<tr>
+    <td>${fmtDateTime(movement.at)}</td>
+    <td class="${movement.sens==='sortie'?'movement-out':'movement-in'}">${movement.sens==='sortie'?'S':'E'}</td>
+    <td><strong>${escapeHTML(movement.articleCode)}</strong><br>${escapeHTML(movement.batch)}</td>
+    <td>${movement.sens==='sortie'?'−':'+'}${Number(movement.qty).toLocaleString('fr-FR',{maximumFractionDigits:3})}<br>${escapeHTML(movement.unit)}</td>
+  </tr>`).join(''):'<tr><td colspan="4">Aucun mouvement à cet instant.</td></tr>';
+}
+
 function openStockDialog(){
   if(!canWriteStock()){showToast('Connexion Manager ou Planificateur requise pour le stock A26.','bad');return;}
   const arts=getArticles().filter(a=>a.active!==false&&['MP','MF','SF','pochette'].includes(a.family));
   const sel=document.getElementById('mArticle');
+  const movementAt=document.getElementById('mAt');
+  movementAt.value=localDateTimeValue(new Date());
+  movementAt.max=localDateTimeValue(new Date(Date.now()+60000));
   sel.innerHTML=arts.map(a=>`<option value="${escapeHTML(a.code)}">${escapeHTML(a.code)} · ${escapeHTML(a.label)}</option>`).join('');
   if(arts[0]){
     document.getElementById('mQty').value=arts[0].defaultQty;
@@ -2102,6 +2236,9 @@ function saveMovement(event){
   if(!canWriteStock()){showToast('Droit insuffisant.','bad');return;}
   const articleCode=document.getElementById('mArticle').value;
   let batch=document.getElementById('mBatch').value.trim();
+  const effectiveAt=new Date(document.getElementById('mAt').value);
+  if(Number.isNaN(effectiveAt.getTime())){showToast('Date et heure effectives requises.','bad');return;}
+  if(effectiveAt.getTime()>Date.now()+60000){showToast('Un mouvement futur n’est pas autorisé.','bad');return;}
   if(!batch&&PD()) batch=PD().nextLotNumber(articleCode,state.activities,getMovements());
   const mv={
     id:uid('mv'),
@@ -2113,7 +2250,7 @@ function saveMovement(event){
     futs:Number(document.getElementById('mFuts').value)||0,
     place:document.getElementById('mPlace').value.trim(),
     comment:document.getElementById('mComment').value.trim(),
-    at:new Date().toISOString(),
+    at:effectiveAt.toISOString(),
     by:state.profile==='planner'?'Planificateur':'Manager'
   };
   if(mv.qty<=0){showToast('Quantité théorique requise.','bad');return;}
@@ -2122,6 +2259,7 @@ function saveMovement(event){
   safePersist();
   document.getElementById('mComment').value='';
   document.getElementById('mBatch').value='';
+  document.getElementById('mAt').value=localDateTimeValue(new Date());
   renderStockTable();renderAll();
   showToast(`Mouvement ${mv.sens} enregistré (${mv.qty} ${mv.unit}).`,'ok');
 }
@@ -2265,6 +2403,7 @@ function applyCsvPreview(){
 window.PharmaDashboardAdapter={
   getState:()=>JSON.parse(JSON.stringify(state)),
   notify:(message,type)=>showToast(message,type),
+  hydrateLocalData:()=>{state=normalizeState(loadState());state.profile='manager';},
   setSyncContext:context=>{
     syncContext={...syncContext,...context};
     if(syncContext.authenticated){
@@ -2278,6 +2417,11 @@ window.PharmaDashboardAdapter={
   applyRemoteSnapshot:snapshot=>{
     if(userIsInteracting()){pendingRemoteSnapshot=snapshot;pendingAutoRefresh=true;return;}
     applyServerSnapshot(snapshot);
+  },
+  clearLocalData:()=>{
+    plannerUnlocked=false;pendingImportState=null;csvPreviewRows=null;state=buildSeedState();state.profile='manager';
+    try{sessionStorage.removeItem('pharma_planner_unlocked');}catch(_){}
+    renderAll();
   }
 };
 

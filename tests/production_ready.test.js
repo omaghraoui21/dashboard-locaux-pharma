@@ -124,6 +124,20 @@ check('storage handoff ignores cleaning and missing lots', () => {
   assert.strictEqual(PD.storageHandoffFromComplete({ roomId: 1, activity: 'Lot en cours', product: 'FSF600', batch: '—' }, rooms), null);
 });
 
+check('stockAt returns A26 balances by article and lot at the selected instant', () => {
+  const balances = PD.stockAt([
+    { sens: 'entree', articleCode: 'FSF600', batch: '26001', qty: 1000, futs: 10, unit: 'gélules', at: '2026-07-12T08:00:00Z' },
+    { sens: 'sortie', articleCode: 'FSF600', batch: '26001', qty: 300, futs: 2, unit: 'gélules', at: '2026-07-12T09:00:00Z' },
+    { sens: 'entree', articleCode: 'FSF600', batch: '26002', qty: 200, futs: 1, unit: 'gélules', at: '2026-07-12T09:30:00Z' },
+    { sens: 'sortie', articleCode: 'FSF600', batch: '26001', qty: 700, futs: 8, unit: 'gélules', at: '2026-07-12T11:00:00Z' }
+  ], '2026-07-12T10:00:00Z');
+  assert.strictEqual(balances.length, 2);
+  assert.deepStrictEqual(
+    Array.from(balances, row => [row.articleCode, row.batch, row.qty, row.futs]),
+    [['FSF600', '26001', 700, 8], ['FSF600', '26002', 200, 1]]
+  );
+});
+
 check('D08/D18 article catalog follows the plant workflow', () => {
   const d08 = PD.articlesForRoomKind(PD.DEFAULT_ARTICLES, 'cond_sec_continuite').map(a => a.code);
   const d18 = PD.articlesForRoomKind(PD.DEFAULT_ARTICLES, 'cond_sec_assemblage').map(a => a.code);
@@ -174,6 +188,13 @@ check('shipped HTML cloud config is production-shaped', () => {
   assert.ok(html.includes('snapshot.articles') && html.includes('snapshot.movements'), 'remote articles and stock snapshot required');
   assert.ok(/function toggleArticle[\s\S]*?logChange\(/.test(html), 'article toggles must mark the seed as changed');
   assert.ok(!/name\)\.toUpperCase\(\)\.includes\(localCode\)/.test(html), 'CSV room matching must not accept partial names');
+  assert.ok(html.includes('id="stockSummaryBody"') && html.includes('id="stockRecentBody"'), 'visible A26 overview required');
+  assert.ok(/id="stockAtFilter"[^>]*type="datetime-local"/.test(html), 'stock instant selector required');
+  assert.ok(/id="mAt"[^>]*type="datetime-local"[^>]*required/.test(html), 'effective movement time required');
+  assert.ok(html.includes('Toutes les données (CSV)') && html.includes('exportAllCSV()') && html.includes('exportStockCSV()'), 'complete and stock exports required');
+  ['LOCAUX', 'ACTIVITÉS', 'ARTICLES', 'MOUVEMENTS A26', 'PARAMÈTRES', 'JOURNAL'].forEach(section => assert.ok(html.includes(`'${section}'`), `missing full export section ${section}`));
+  assert.ok(/getMovements\(\)[\s\S]*?slice\(0,20\)/.test(html), 'A26 overview must keep the latest 20 movements');
+  assert.ok(/effectiveAt\.getTime\(\)>Date\.now\(\)\+60000/.test(html), 'future stock movements must be rejected');
 });
 
 check('root redirect preserves Supabase auth parameters', () => {
@@ -204,6 +225,29 @@ check('inline scripts parse and dynamic IDs are encoded', () => {
   assert.ok(!html.includes("openCalendarActivity('${"));
 });
 
+check('production content is auth-gated and local operational data is cleared when signed out', () => {
+  const html = read('dashboard_4_locaux_pharma.html');
+  const client = read('supabase-client.js');
+  assert.ok(/id="loginGate"/.test(html), 'login gate required');
+  assert.ok(/id="dashboardApp"[^>]*hidden/.test(html), 'dashboard must start hidden');
+  assert.ok(/syncContext\.authenticated&&\['manager','planner'\]\.includes\(syncContext\.role\)/.test(html), 'authorized role required to reveal dashboard');
+  assert.ok(!/allowed=!syncContext\.enabled/.test(html), 'disabled Supabase must never bypass authentication');
+  assert.ok(!html.includes('id="authDialog"'), 'login gate must not be closable as a dialog');
+  assert.ok(html.includes('let state = buildSeedState();') && !html.includes('state = loadState();'), 'cached operational data must not load before authentication');
+  assert.ok(/@media\(max-width:760px\)[^\n]*\.action-menu-popover\{left:auto;right:0\}/.test(html), 'mobile action menus must stay inside the viewport');
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+  assert.strictEqual(new Set(ids).size, ids.length, 'HTML IDs must be unique');
+  for (const key of ['CACHE_KEY', 'OUTBOX_KEY', 'META_KEY', "'pharma_rooms'", "'pharma_history'"]) assert.ok(client.includes(key), `cache key ${key} must be removed`);
+  assert.ok(client.includes('localStorage.removeItem(key)'), 'all operational cache keys must be removed');
+  assert.ok(client.includes('adapter()?.hydrateLocalData?.();') && html.includes('hydrateLocalData:()=>'), 'local cache must hydrate only after profile validation');
+  assert.ok(/if \(!session\?\.user\)[\s\S]*?clearLocalData\(\);[\s\S]*?publishContext\(\)/.test(client), 'signed-out session must clear operational data before publishing context');
+  assert.ok(/Profil applicatif non autorisé\.[\s\S]*?catch \(error\)[\s\S]*?clearLocalData\(\)/.test(client), 'authenticated users without an allowed profile must also lose cached data');
+  const syncFailure = client.slice(client.indexOf("console.error('[PharmaSync] Synchronisation initiale impossible'"), client.indexOf('\n  async function signInWithPassword'));
+  assert.ok(syncFailure.includes('Les données locales sont conservées.') && !syncFailure.includes('clearLocalData()'), 'validated sessions must keep local data during a sync outage');
+  assert.ok(/if \(!runtime\.enabled\) \{\s*clearLocalData\(\)/.test(client), 'disabled secure backend must purge local data');
+  assert.ok(/auth\.signOut\(\{ scope: 'local' \}\)/.test(client), 'logout must affect only the current device');
+});
+
 check('client-served JS has no admin secrets', () => {
   for (const f of ['supabase-client.js', 'plant-domain.js', 'redirect.js']) {
     const t = read(f);
@@ -227,7 +271,28 @@ check('resolveConfig-equivalent prefers publishableKey (shipped client source)',
   assert.ok(src.includes('db = { schema:'), 'custom schema client option');
 });
 
-check('offline capture queues articles and stock movements', () => {
+check('disabled Supabase initialization purges operational and legacy cache', () => {
+  const keys = ['pharma_ops_dashboard_v2', 'pharma_ops_sync_queue_v4', 'pharma_ops_sync_meta_v4', 'pharma_rooms', 'pharma_history'];
+  const storage = {
+    _d: Object.fromEntries(keys.map(key => [key, 'stale'])),
+    getItem(k) { return this._d[k] ?? null; },
+    setItem(k, v) { this._d[k] = String(v); },
+    removeItem(k) { delete this._d[k]; }
+  };
+  const testWindow = {
+    PHARMA_SUPABASE_CONFIG: { enabled: false }, localStorage: storage,
+    PharmaDashboardAdapter: { getState: () => ({}), setSyncContext() {}, notify() {}, clearLocalData() {} },
+    addEventListener() {}, location: { protocol: 'https:', href: 'https://example.test/' }
+  };
+  vm.runInNewContext(clientSrc, {
+    window: testWindow, document: { readyState: 'complete', addEventListener() {} },
+    localStorage: storage, location: testWindow.location, navigator: { onLine: true },
+    console: { log() {}, warn() {}, error() {} }, setTimeout, clearTimeout
+  });
+  keys.forEach(key => assert.strictEqual(storage.getItem(key), null, `${key} must be purged`));
+});
+
+check('state capture queues articles and stock movements from an explicit baseline', () => {
   let currentState = {
     rooms: [], activities: [], articles: [], movements: [],
     settings: { hoursPerTeam: 8, weekdayTeams: 2, includeSaturday: false, saturdayTeams: 1 }
@@ -246,6 +311,7 @@ check('offline capture queues articles and stock movements', () => {
     window: testWindow, document, localStorage: storage, location: testWindow.location,
     navigator: { onLine: true }, console: { log() {}, warn() {}, error() {} }, setTimeout, clearTimeout
   });
+  testWindow.PharmaSync.resetBaseline(currentState);
   currentState = {
     ...currentState,
     articles: [{ code: 'MF1', label: 'MF', family: 'MF', unit: 'kg', defaultQty: 1, defaultFuts: 0, active: true }],
