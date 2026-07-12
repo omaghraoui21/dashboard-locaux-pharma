@@ -14,23 +14,23 @@ fail(){ echo "FAIL  $*"; FAIL=1; }
 cd "$ROOT"
 
 # 1. Fichiers requis
-for f in dashboard_4_locaux_pharma.html supabase-client.js plant-domain.js supabase_schema.sql README_SUPABASE.md TOKENS_ET_DEPLOIEMENT.md; do
+for f in index.html redirect.js dashboard_4_locaux_pharma.html supabase-client.js plant-domain.js supabase_schema.sql README_SUPABASE.md TOKENS_ET_DEPLOIEMENT.md; do
   [[ -f "$f" ]] && pass "fichier $f" || fail "fichier manquant $f"
 done
 
 # 2. Syntaxe JS client
 if command -v node >/dev/null 2>&1; then
-  if node --check supabase-client.js 2>/dev/null; then
-    pass "node --check supabase-client.js"
+  if node --check supabase-client.js 2>/dev/null && node --check redirect.js 2>/dev/null; then
+    pass "node --check client scripts"
   else
-    fail "node --check supabase-client.js"
+    fail "node --check client scripts"
   fi
 else
   echo "SKIP  node non disponible"
 fi
 
 # 3. HTTP
-for path in /dashboard_4_locaux_pharma.html /supabase-client.js /plant-domain.js; do
+for path in / /redirect.js /dashboard_4_locaux_pharma.html /supabase-client.js /plant-domain.js; do
   code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${path}" || echo 000)
   [[ "$code" == "200" ]] && pass "GET $path → $code" || fail "GET $path → $code"
 done

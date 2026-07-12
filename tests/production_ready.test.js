@@ -176,6 +176,24 @@ check('shipped HTML cloud config is production-shaped', () => {
   assert.ok(!/name\)\.toUpperCase\(\)\.includes\(localCode\)/.test(html), 'CSV room matching must not accept partial names');
 });
 
+check('root redirect preserves Supabase auth parameters', () => {
+  const index = read('index.html');
+  const source = read('redirect.js');
+  const redirects = [];
+  assert.ok(index.includes('src="redirect.js"'), 'root must load the redirect script');
+  assert.ok(!/http-equiv="refresh"/i.test(index), 'meta refresh would discard the auth fragment');
+  vm.runInNewContext(source, {
+    location: {
+      search: '?code=one-time-code',
+      hash: '#access_token=session-token',
+      replace: value => redirects.push(value)
+    }
+  });
+  assert.deepStrictEqual(Array.from(redirects), [
+    'dashboard_4_locaux_pharma.html?code=one-time-code#access_token=session-token'
+  ]);
+});
+
 check('inline scripts parse and dynamic IDs are encoded', () => {
   const html = read('dashboard_4_locaux_pharma.html');
   const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(match => match[1]);
@@ -187,7 +205,7 @@ check('inline scripts parse and dynamic IDs are encoded', () => {
 });
 
 check('client-served JS has no admin secrets', () => {
-  for (const f of ['supabase-client.js', 'plant-domain.js']) {
+  for (const f of ['supabase-client.js', 'plant-domain.js', 'redirect.js']) {
     const t = read(f);
     assert.ok(!/service_role/.test(t), `${f} must not contain service_role`);
     assert.ok(!/\bsbp_/.test(t), `${f} must not contain sbp_`);

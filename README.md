@@ -37,7 +37,7 @@ Les trois comptes techniques de recette sont bannis; leurs sessions, refresh tok
 
 ```bash
 # depuis le package
-cp dashboard_4_locaux_pharma.html plant-domain.js supabase-client.js index.html /tmp/dashboard-locaux-pharma-audit/
+cp dashboard_4_locaux_pharma.html plant-domain.js supabase-client.js index.html redirect.js /tmp/dashboard-locaux-pharma-audit/
 cd /tmp/dashboard-locaux-pharma-audit && git add -A && git commit -m "update" && git push
 ```
 
