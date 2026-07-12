@@ -23,9 +23,9 @@ Ancien branchement `dpi-trs-tracker` : schéma `locaux_dash` y reste en place ma
 
 ## Comptes de production
 
-Les inscriptions publiques sont désactivées. Inviter les adresses réelles depuis Supabase Auth, puis créer explicitement leur ligne dans `locaux_dash.profiles` avec le rôle `manager` ou `planner`. Aucun mot de passe ne doit être conservé dans ce dépôt.
+Les inscriptions publiques sont désactivées. Le propriétaire de l'organisation a reçu une invitation de production et possède un profil `planner` actif dans `locaux_dash.profiles`. Avant d'inviter une adresse qui n'appartient pas à l'équipe Supabase, configurer un SMTP dédié; créer ensuite explicitement sa ligne avec le rôle `manager` ou `planner`. Aucun mot de passe ne doit être conservé dans ce dépôt.
 
-Les trois comptes techniques de recette sont bannis; leurs sessions, refresh tokens et profils ont été supprimés. Il n’existe donc aucun profil cloud actif tant que les adresses réelles ne sont pas invitées.
+Les trois comptes techniques de recette sont bannis; leurs sessions, refresh tokens et profils ont été supprimés. Seul le profil réel du propriétaire reste actif.
 
 ## Utilisation
 
@@ -46,6 +46,7 @@ cd /tmp/dashboard-locaux-pharma-audit && git add -A && git commit -m "update" &&
 - Ne jamais mettre `service_role` / `sbp_` dans le HTML  
 - Révoquer tout token collé en chat  
 - Inscriptions Auth fermées, mot de passe minimum 12 caractères  
+- SMTP Supabase natif limité au propriétaire membre de l'organisation; SMTP dédié requis avant extension à d'autres utilisateurs
 - Le contrôle HaveIBeenPwned nécessite un plan Supabase compatible
 - La CI `Verify static dashboard` exécute les tests Node et le smoke test à chaque push
 
