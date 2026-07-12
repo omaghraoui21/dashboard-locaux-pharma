@@ -19,4 +19,7 @@ jobs:
       - run: node --check plant-domain.js
       - run: node --check supabase-client.js
       - run: bash -n serve.sh smoke_check.sh
+      - name: Scan client files for secret material
+        run: |
+          ! grep -E '(sbp_|ghp_|github_pat_)[A-Za-z0-9_-]{20,}|service_role[^[:space:]]{20,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}' dashboard_4_locaux_pharma.html plant-domain.js supabase-client.js redirect.js
       - run: node tests/production_ready.test.js
