@@ -23,7 +23,7 @@ Ancien branchement `dpi-trs-tracker` : schéma `locaux_dash` y reste en place ma
 
 ## Comptes de production
 
-Les inscriptions publiques sont désactivées. Le propriétaire de l'organisation a reçu une invitation de production et possède un profil `planner` actif dans `locaux_dash.profiles`. Avant d'inviter une adresse qui n'appartient pas à l'équipe Supabase, configurer un SMTP dédié; créer ensuite explicitement sa ligne avec le rôle `manager` ou `planner`. Aucun mot de passe ne doit être conservé dans ce dépôt.
+Les inscriptions publiques sont désactivées. Le compte du propriétaire est confirmé et possède un profil `planner` actif dans `locaux_dash.profiles`; son accès lecture/écriture/Realtime a été validé sur le site public. Avant d'inviter une adresse qui n'appartient pas à l'équipe Supabase, configurer un SMTP dédié; créer ensuite explicitement sa ligne avec le rôle `manager` ou `planner`. Aucun mot de passe ne doit être conservé dans ce dépôt.
 
 Les trois comptes techniques de recette sont bannis; leurs sessions, refresh tokens et profils ont été supprimés. Seul le profil réel du propriétaire reste actif.
 
